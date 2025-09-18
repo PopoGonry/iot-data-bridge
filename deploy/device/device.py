@@ -74,8 +74,7 @@ class IoTDevice:
         """Stop the device"""
         self.logger.info("Stopping device", device_id=self.device_id)
         self.is_running = False
-        if self.client:
-            await self.client.disconnect()
+        # aiomqtt client will be closed when exiting the async with context
     
     async def _handle_message(self, message):
         """Handle incoming MQTT message"""
