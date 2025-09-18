@@ -31,7 +31,7 @@ objects:
 devices:
   VM-A:
     mqtt:
-      host: "localhost"
+      host: "192.168.32.104"
       port: 1883
       topic: "devices/vm-a/ingress"
       qos: 1
