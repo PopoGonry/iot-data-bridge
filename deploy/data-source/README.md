@@ -4,21 +4,52 @@
 
 ## 🚀 설치 및 실행
 
-### **1. 의존성 설치**
+### **1. 자동 설치 (권장)**
 ```bash
+# Linux/Mac
+./install.sh
+
+# Windows
+install.bat
+```
+
+### **2. 수동 설치**
+```bash
+# 가상환경 생성 (권장)
+python -m venv venv
+
+# 가상환경 활성화
+# Linux/Mac
+source venv/bin/activate
+# Windows
+venv\Scripts\activate
+
+# 의존성 설치
 pip install -r requirements.txt
 ```
 
-### **2. 실행**
+### **3. 실행**
 ```bash
-# Linux/Mac
+# Linux/Mac (자동 의존성 확인 및 설치)
 ./start.sh 192.168.1.100 1883
 
-# Windows
+# Windows (자동 의존성 확인 및 설치)
 start.bat 192.168.1.100 1883
 
 # 직접 실행
 python test_mqtt_publisher-multi-vm.py 192.168.1.100 1883
+```
+
+### **4. 실행 예시**
+```bash
+# 로컬 MQTT 브로커에 연결
+./start.sh localhost 1883
+
+# 원격 MQTT 브로커에 연결
+./start.sh 192.168.1.100 1883
+
+# 다른 포트 사용
+./start.sh 192.168.1.100 8883
 ```
 
 ## 📊 전송되는 데이터
@@ -61,22 +92,29 @@ test_cases = [
 
 ## 🔧 테스트
 
-### **MQTT 연결 테스트**
+### **연결 테스트**
 ```bash
-# 브로커 연결 테스트
-mosquitto_pub -h 192.168.1.100 -p 1883 -t "test/topic" -m "Hello World"
+# MQTT 브로커 연결 확인
+python test_connection.py localhost 1883
 
-# 구독 테스트
-mosquitto_sub -h 192.168.1.100 -p 1883 -t "test/topic"
+# 성공 시: ✅ Connection successful!
+# 실패 시: ❌ Connection failed: [오류 메시지]
 ```
 
 ### **데이터 전송 테스트**
 ```bash
-# 단일 데이터 전송
-python test_mqtt_publisher-multi-vm.py 192.168.1.100 1883
+# 테스트 데이터 전송
+python test_mqtt_publisher-multi-vm.py localhost 1883
 
-# 구독자로 수신 확인
-python test_mqtt_subscriber.py 192.168.1.100 1883
+# 구독자로 수신 확인 (별도 터미널)
+python test_mqtt_subscriber.py localhost 1883
+```
+
+### **외부 도구 테스트**
+```bash
+# mosquitto 클라이언트 사용
+mosquitto_pub -h localhost -p 1883 -t "test/topic" -m "Hello World"
+mosquitto_sub -h localhost -p 1883 -t "test/topic"
 ```
 
 ## 🐛 문제 해결

@@ -206,6 +206,11 @@ class IoTDataBridge:
                 self.logging_layer.start(),
                 return_exceptions=True
             )
+            
+            # Keep running until stopped
+            while self.running:
+                await asyncio.sleep(1)
+                
         except Exception as e:
             self.logger.error("Error in main loop", error=str(e))
             raise
