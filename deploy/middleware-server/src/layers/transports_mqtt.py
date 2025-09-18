@@ -54,11 +54,11 @@ class MQTTTransport:
                     qos=device_config.get('qos', 1)
                 )
             
-            self.logger.info("📤 MESSAGE SENT TO DEVICE",
+            self.logger.info("📤 디바이스로 메시지 전송",
                             device_id=device_target.device_id,
                             topic=topic,
                             object=device_target.object,
-                            payload=payload)
+                            value=device_target.value)
             
             return True
             
