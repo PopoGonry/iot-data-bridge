@@ -195,11 +195,11 @@ async def main():
     
     # Setup formatters
     file_formatter = logging.Formatter(
-        '%(asctime)s | %(message)s',
+        '%(asctime)s | INFO | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_formatter = logging.Formatter(
-        '%(asctime)s | %(levelname)-8s | %(message)s',
+        '%(asctime)s | %(levelname)-5s | %(message)s',
         datefmt='%H:%M:%S'
     )
     
@@ -213,18 +213,33 @@ async def main():
         force=True
     )
     
-    # Configure structlog
+    # Configure structlog with custom formatter
+    def simple_formatter(logger, method_name, event_dict):
+        """Simple formatter for clean logs"""
+        level = event_dict.get('level', 'INFO').upper()
+        message = event_dict.get('event', '')
+        
+        # Extract key fields
+        device_id = event_dict.get('device_id', '')
+        object_name = event_dict.get('object', '')
+        value = event_dict.get('value', '')
+        count = event_dict.get('count', '')
+        
+        if object_name and value:
+            return f"{message} device_id={device_id} object={object_name} value={value} count={count}"
+        elif device_id:
+            return f"{message} device_id={device_id}"
+        else:
+            return message
+    
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
             structlog.processors.TimeStamper(fmt="%H:%M:%S"),
-            structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.dev.ConsoleRenderer(colors=False)  # 색상 비활성화
+            simple_formatter
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
