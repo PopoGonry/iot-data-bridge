@@ -33,10 +33,6 @@ class IoTDevice:
         topic = mqtt_config.get('topic', f'devices/{self.device_id.lower()}/ingress')
         qos = mqtt_config.get('qos', 1)
         
-        print(f"[DEBUG] Starting device {self.device_id}")
-        print(f"[DEBUG] MQTT Host: {host}:{port}")
-        print(f"[DEBUG] Topic: {topic}")
-        
         self.logger.info("Starting device", 
                        device_id=self.device_id,
                        host=host,
@@ -44,7 +40,6 @@ class IoTDevice:
                        topic=topic)
         
         # Create MQTT client
-        print(f"[DEBUG] Creating MQTT client...")
         self.client = Client(
             hostname=host,
             port=port,
@@ -53,22 +48,15 @@ class IoTDevice:
             keepalive=mqtt_config.get('keepalive', 60)
         )
         
-        print(f"[DEBUG] Connecting to MQTT broker...")
-        self.logger.debug("MQTT 브로커 연결 중", host=host, port=port)
-        
         try:
             async with self.client:
-                print(f"[DEBUG] ✅ Connected to MQTT broker!")
                 self.logger.debug("MQTT 브로커 연결 성공", host=host, port=port)
                 
-                print(f"[DEBUG] Subscribing to topic: {topic}")
                 self.logger.debug("MQTT 토픽 구독 시작", topic=topic, qos=qos)
                 await self.client.subscribe(topic, qos=qos)
-                print(f"[DEBUG] ✅ Subscribed to topic: {topic}")
                 self.logger.debug("MQTT 토픽 구독 완료", topic=topic)
                 
                 self.is_running = True
-                print(f"[DEBUG] 🎧 Device is now listening for messages...")
                 self.logger.info("디바이스가 메시지 수신 대기 중")
                 
                 # Listen for messages
@@ -77,19 +65,15 @@ class IoTDevice:
                         break
                     
                     try:
-                        print(f"[DEBUG] 📬 Raw MQTT message received: {message.topic}")
                         self.logger.debug("원시 MQTT 메시지 수신", 
                                        topic=message.topic,
                                        payload_size=len(message.payload),
                                        qos=message.qos)
                         await self._handle_message(message)
                     except Exception as e:
-                        print(f"[DEBUG] Error handling message: {e}")
                         self.logger.error("Error handling message", error=str(e))
                         
         except Exception as e:
-            print(f"[DEBUG] ❌ Connection failed: {e}")
-            print(f"[DEBUG] Error type: {type(e).__name__}")
             self.logger.error("Device 연결 실패", 
                             error=str(e), 
                             error_type=type(e).__name__,
@@ -106,8 +90,6 @@ class IoTDevice:
     async def _handle_message(self, message):
         """Handle incoming MQTT message"""
         try:
-            print(f"[DEBUG] Processing message payload: {message.payload.decode('utf-8')}")
-            
             # Parse message payload
             payload = json.loads(message.payload.decode('utf-8'))
             
@@ -115,17 +97,12 @@ class IoTDevice:
             object_name = payload.get('object')
             value = payload.get('value')
             
-            print(f"[DEBUG] Parsed data - Object: {object_name}, Value: {value}")
-            
             if not all([object_name, value is not None]):
-                print(f"[DEBUG] ❌ Invalid message format: {payload}")
                 self.logger.warning("Invalid message format", payload=payload)
                 return
             
             # Increment counter
             self.data_count += 1
-            
-            print(f"[DEBUG] 📨 Device received data - Count: {self.data_count}")
             
             # Log received data
             self.logger.info("데이터 수신",
@@ -135,10 +112,8 @@ class IoTDevice:
                            count=self.data_count)
             
         except json.JSONDecodeError as e:
-            print(f"[DEBUG] ❌ JSON decode error: {e}")
             self.logger.error("Invalid JSON in message", error=str(e))
         except Exception as e:
-            print(f"[DEBUG] ❌ Error processing message: {e}")
             self.logger.error("Error processing message", error=str(e))
 
 
@@ -223,10 +198,9 @@ async def main():
         device_id = event_dict.get('device_id', '')
         object_name = event_dict.get('object', '')
         value = event_dict.get('value', '')
-        count = event_dict.get('count', '')
         
         if object_name and value:
-            return f"{message} device_id={device_id} object={object_name} value={value} count={count}"
+            return f"{message} device_id={device_id} object={object_name} value={value}"
         elif device_id:
             return f"{message} device_id={device_id}"
         else:
