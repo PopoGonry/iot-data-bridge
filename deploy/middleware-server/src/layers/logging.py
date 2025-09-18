@@ -92,10 +92,8 @@ class LoggingLayer(LoggingLayerInterface):
         try:
             self._increment_processed()
             
-            # Convert to dict for JSON serialization
+            # Convert to dict for JSON serialization (핵심 데이터만)
             log_data = {
-                "type": "device_ingest",
-                "timestamp": event.timestamp.isoformat(),
                 "device_id": event.device_id,
                 "object": event.object,
                 "value": event.value
