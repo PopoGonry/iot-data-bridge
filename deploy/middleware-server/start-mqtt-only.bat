@@ -6,6 +6,9 @@ echo Starting IoT Data Bridge Middleware Server (MQTT Only)...
 REM Create logs directory
 if not exist logs mkdir logs
 
+REM Create mosquitto_data directory for MQTT broker persistence
+if not exist mosquitto_data mkdir mosquitto_data
+
 REM Start MQTT broker
 echo Starting MQTT broker...
 start /B mosquitto -c mosquitto.conf

@@ -246,6 +246,7 @@ class IoTDataBridge:
         try:
             subprocess.run(["pkill", "mosquitto"], check=False)
         except Exception as e:
+            pass
     
     def setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown"""

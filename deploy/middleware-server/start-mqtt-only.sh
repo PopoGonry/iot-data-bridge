@@ -23,6 +23,9 @@ fi
 # Create logs directory
 mkdir -p logs
 
+# Create mosquitto_data directory for MQTT broker persistence
+mkdir -p mosquitto_data
+
 # Start MQTT broker
 echo "Starting MQTT broker..."
 # Kill existing mosquitto if running
