@@ -29,6 +29,11 @@ scp -r deploy/middleware-server/ user@192.168.1.100:/opt/iot-data-bridge/
 # 2. VM-1에서 실행
 ssh user@192.168.1.100
 cd /opt/iot-data-bridge
+
+# 3. mosquitto_data 디렉토리 생성 (MQTT 브로커 데이터 저장용)
+mkdir -p mosquitto_data
+
+# 4. 의존성 설치 및 실행
 pip install -r requirements.txt
 ./start.sh
 ```
@@ -128,6 +133,20 @@ sudo systemctl status mosquitto
 - 의존성 설치 확인
 - 로그 파일 확인
 - 권한 설정 확인
+
+### **MQTT 브로커 데이터베이스 오류**
+```
+Error saving in-memory database, unable to open ./mosquitto_data//mosquitto.db.new for writing.
+Error: No such file or directory.
+```
+**해결 방법:**
+```bash
+# mosquitto_data 디렉토리 생성
+mkdir -p mosquitto_data
+
+# 권한 설정 (필요한 경우)
+chmod 755 mosquitto_data
+```
 
 ### **데이터 전송 실패**
 - MQTT 브로커 상태 확인
