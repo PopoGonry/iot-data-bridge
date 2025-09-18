@@ -60,8 +60,7 @@ class MQTTInputHandler:
         """Stop MQTT client"""
         self.logger.info("Stopping MQTT client")
         self.is_running = False
-        if self.client:
-            await self.client.disconnect()
+        # MQTT client will be closed when exiting the async with context
     
     async def _process_message(self, message):
         """Process incoming MQTT message"""
@@ -145,6 +144,25 @@ class InputLayer(InputLayerInterface):
                 pass
         
         self.logger.info("MQTT input layer stopped")
+    
+    async def process_raw_data(self, raw_data: dict, meta: dict) -> Optional[Any]:
+        """Process raw input data"""
+        try:
+            # Generate trace ID
+            trace_id = str(uuid.uuid4())
+            
+            # Create ingress event
+            ingress_event = IngressEvent(
+                trace_id=trace_id,
+                raw=raw_data,
+                meta=meta
+            )
+            
+            return ingress_event
+            
+        except Exception as e:
+            self.logger.error("Error processing raw data", error=str(e))
+            return None
     
     async def _on_ingress_event(self, event: IngressEvent):
         """Handle ingress event"""
