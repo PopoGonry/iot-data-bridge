@@ -19,7 +19,16 @@ if command -v dotnet &> /dev/null; then
     
     # Start IoT Data Bridge (SignalR Only)
     echo "Starting IoT Data Bridge (SignalR Only)..."
-    python src/main.py --config config/app-signalr.yaml
+    
+    # Try python3 first, then python
+    if command -v python3 &> /dev/null; then
+        python3 src/main.py --config config/app-signalr.yaml
+    elif command -v python &> /dev/null; then
+        python src/main.py --config config/app-signalr.yaml
+    else
+        echo "Error: Python not found. Please install Python 3.8 or higher."
+        exit 1
+    fi
 else
     echo "Error: dotnet not found. Please install .NET SDK:"
     echo "https://dotnet.microsoft.com/download"
