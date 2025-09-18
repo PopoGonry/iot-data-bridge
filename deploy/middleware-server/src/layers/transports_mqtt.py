@@ -48,11 +48,21 @@ class MQTTTransport:
             
             # Send message
             async with self.client:
+                self.logger.info("📤 디바이스로 메시지 전송 시작", 
+                               device_id=device_target.device_id,
+                               topic=topic,
+                               object=device_target.object,
+                               value=device_target.value)
+                
                 await self.client.publish(
                     topic,
                     payload=json.dumps(payload),
                     qos=device_config.get('qos', 1)
                 )
+                
+                self.logger.info("✅ 디바이스로 메시지 전송 완료", 
+                               device_id=device_target.device_id,
+                               topic=topic)
             
             self.logger.info("📤 디바이스로 메시지 전송",
                             device_id=device_target.device_id,
@@ -116,20 +126,13 @@ class TransportsLayer(TransportsLayerInterface):
             # Create device targets
             device_targets = []
             for device_id in event.target_devices:
-                device_profile = self.device_catalog.get_device_profile(device_id)
-                if not device_profile:
-                    self.logger.warning("Device profile not found", device_id=device_id)
-                    continue
-                
-                # Create transport config
-                mqtt_config = device_profile.get_transport_config('mqtt')
-                if not mqtt_config:
-                    self.logger.warning("MQTT config not found for device", device_id=device_id)
-                    continue
-                    
+                # Create transport config (simplified - no device profile needed)
                 transport_config = TransportConfig(
                     type=TransportType.MQTT,
-                    config=mqtt_config
+                    config={
+                        'topic': f'devices/{device_id.lower()}/ingress',
+                        'qos': 1
+                    }
                 )
                 
                 # Create device target

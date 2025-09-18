@@ -49,8 +49,9 @@ class MQTTInputHandler:
                                topic=self.config.topic)
                 
                 # Subscribe to topic
+                self.logger.info("📡 TOPIC 구독 시작", topic=self.config.topic, qos=self.config.qos)
                 await self.client.subscribe(self.config.topic, qos=self.config.qos)
-                self.logger.info("📡 SUBSCRIBED TO TOPIC", topic=self.config.topic)
+                self.logger.info("✅ TOPIC 구독 완료", topic=self.config.topic)
                 
                 async for message in self.client.messages:
                     if not self.is_running:

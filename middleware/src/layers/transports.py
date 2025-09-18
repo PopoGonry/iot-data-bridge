@@ -10,10 +10,10 @@ import structlog
 from aiomqtt import Client as MQTTClient
 from signalrcore import HubConnectionBuilder
 
-from src.layers.base import TransportsLayerInterface
-from src.models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog
-from src.models.config import TransportsConfig
-from src.catalogs.device_catalog import DeviceCatalog
+from layers.base import TransportsLayerInterface
+from models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog
+from models.config import TransportsConfig
+from catalogs.device_catalog import DeviceCatalog
 
 
 class MQTTTransport:
@@ -49,11 +49,21 @@ class MQTTTransport:
             
             # Send message
             async with self.client:
+                self.logger.info("📤 디바이스로 메시지 전송 시작", 
+                               device_id=device_target.device_id,
+                               topic=topic,
+                               object=device_target.object,
+                               value=device_target.value)
+                
                 await self.client.publish(
                     topic,
                     payload=json.dumps(payload),
                     qos=device_config.get('qos', 1)
                 )
+                
+                self.logger.info("✅ 디바이스로 메시지 전송 완료", 
+                               device_id=device_target.device_id,
+                               topic=topic)
             
             self.logger.debug("Sent MQTT message to device",
                             device_id=device_target.device_id,
@@ -174,26 +184,15 @@ class TransportsLayer(TransportsLayerInterface):
             # Create device targets
             device_targets = []
             for device_id in event.target_devices:
-                device_profile = self.device_catalog.get_device_profile(device_id)
-                if not device_profile:
-                    self.logger.warning("No profile found for device",
-                                      device_id=device_id)
-                    continue
-                
-                # Get transport configuration
-                transport_config_data = device_profile.get_transport_config(self.config.type)
-                if not transport_config_data:
-                    self.logger.warning("No transport config found for device",
-                                      device_id=device_id,
-                                      transport_type=self.config.type)
-                    continue
-                
-                # Create device target
+                # Create device target (simplified - no device profile needed)
                 device_target = DeviceTarget(
                     device_id=device_id,
                     transport_config=TransportConfig(
                         type=TransportType(self.config.type),
-                        config=transport_config_data
+                        config={
+                            'topic': f'devices/{device_id.lower()}/ingress',
+                            'qos': 1
+                        }
                     ),
                     object=event.object,
                     value=event.value

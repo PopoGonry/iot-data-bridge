@@ -1,4 +1,4 @@
-# Device Object Catalog - Maps objects to devices and device profiles
+# Device Object Catalog - Maps objects to devices
 objects:
   Geo.Latitude:
     - VM-A
@@ -26,45 +26,3 @@ objects:
   Environment.Temperature:
     - VM-C
     - VM-D
-
-# Device Profiles - Transport configuration for each device
-devices:
-  VM-A:
-    mqtt:
-      host: "localhost"
-      port: 1883
-      topic: "devices/vm-a/ingress"
-      qos: 1
-    signalr:
-      group: "vm-a"
-      target: "ingress"
-      
-  VM-B:
-    mqtt:
-      host: "localhost"
-      port: 1883
-      topic: "devices/vm-b/ingress"
-      qos: 1
-    signalr:
-      group: "engine_group"
-      target: "rpmIngress"
-      
-  VM-C:
-    mqtt:
-      host: "localhost"
-      port: 1883
-      topic: "devices/vm-c/ingress"
-      qos: 1
-    signalr:
-      group: "vm-c"
-      target: "ingress"
-      
-  VM-D:
-    mqtt:
-      host: "localhost"
-      port: 1883
-      topic: "devices/vm-d/ingress"
-      qos: 1
-    signalr:
-      group: "monitoring_group"
-      target: "ingress"

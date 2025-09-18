@@ -50,15 +50,16 @@ class IoTDevice:
             )
             
             # Start MQTT client
-            self.logger.info("Connecting to MQTT broker", host=host, port=port)
+            self.logger.info("🔌 MQTT 브로커 연결 중", host=host, port=port)
             async with self.client:
-                self.logger.info("Connected to MQTT broker successfully")
+                self.logger.info("✅ MQTT 브로커 연결 성공", host=host, port=port)
                 
+                self.logger.info("📡 MQTT 토픽 구독 시작", topic=topic, qos=qos)
                 await self.client.subscribe(topic, qos=qos)
-                self.logger.info("Subscribed to MQTT topic", topic=topic)
+                self.logger.info("✅ MQTT 토픽 구독 완료", topic=topic)
                 
                 self.is_running = True
-                self.logger.info("Device is now listening for messages...")
+                self.logger.info("🎧 디바이스가 메시지 수신 대기 중...")
                 
                 # Listen for messages
                 async for message in self.client.messages:
@@ -66,7 +67,7 @@ class IoTDevice:
                         break
                     
                     try:
-                        self.logger.info("Received raw MQTT message", 
+                        self.logger.info("📬 원시 MQTT 메시지 수신", 
                                        topic=message.topic,
                                        payload_size=len(message.payload),
                                        qos=message.qos)
@@ -103,7 +104,7 @@ class IoTDevice:
             self.data_count += 1
             
             # Log received data
-            self.logger.info("Received data",
+            self.logger.info("📨 디바이스가 데이터 수신",
                            device_id=self.device_id,
                            object=object_name,
                            value=value,
