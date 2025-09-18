@@ -174,7 +174,7 @@ class InputLayer(InputLayerInterface):
             self._increment_processed()
             await self.mapping_layer_callback(event)
         except Exception as e:
-            self._increment_errors()
+            self._increment_error()
             self.logger.error("Error handling ingress event", 
                             trace_id=event.trace_id, 
                             error=str(e))

@@ -164,7 +164,7 @@ class TransportsLayer(TransportsLayerInterface):
                            success_count=success_count)
             
         except Exception as e:
-            self._increment_errors()
+            self._increment_error()
             self.logger.error("Error in send_to_devices",
                             trace_id=event.trace_id,
                             error=str(e))
