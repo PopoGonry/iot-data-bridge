@@ -47,11 +47,6 @@ class MQTTTransport:
             
             # Send message
             async with self.client:
-                self.logger.debug("디바이스로 메시지 전송 시작", 
-                               device_id=device_target.device_id,
-                               topic=topic,
-                               object=device_target.object,
-                               value=device_target.value)
                 
                 await self.client.publish(
                     topic,
@@ -59,9 +54,6 @@ class MQTTTransport:
                     qos=device_config.get('qos', 1)
                 )
                 
-                self.logger.debug("디바이스로 메시지 전송 완료", 
-                               device_id=device_target.device_id,
-                               topic=topic)
             
             self.logger.info("디바이스로 메시지 전송",
                             device_id=device_target.device_id,

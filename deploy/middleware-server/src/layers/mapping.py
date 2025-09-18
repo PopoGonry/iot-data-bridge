@@ -21,22 +21,17 @@ class MappingLayer(MappingLayerInterface):
     
     async def start(self):
         """Start mapping layer"""
-        self.logger.info("Starting mapping layer")
         self.is_running = True
-        self.logger.info("Mapping layer started")
     
     async def stop(self):
         """Stop mapping layer"""
-        self.logger.info("Stopping mapping layer")
         self.is_running = False
-        self.logger.info("Mapping layer stopped")
     
     async def map_event(self, event: IngressEvent) -> Optional[MappedEvent]:
         """Map ingress event to mapped event"""
         try:
             self._increment_processed()
             
-            self.logger.debug("매핑 시작", trace_id=event.trace_id)
             
             # Extract payload data
             payload = event.raw.get('payload', {})
@@ -46,47 +41,21 @@ class MappingLayer(MappingLayerInterface):
             
             # Validate required fields
             if not all([equip_tag, message_id, value is not None]):
-                self.logger.warning("MISSING REQUIRED FIELDS",
-                                 trace_id=event.trace_id,
-                                 equip_tag=equip_tag,
-                                 message_id=message_id,
-                                 has_value=value is not None,
-                                 payload=payload)
                 self._increment_error()
                 return None
             
             # Get mapping rule
             rule = self.mapping_catalog.get_mapping(equip_tag, message_id)
             if not rule:
-                self.logger.warning("NO MAPPING RULE FOUND",
-                                 trace_id=event.trace_id,
-                                 equip_tag=equip_tag,
-                                 message_id=message_id)
                 self._increment_error()
                 return None
             
-            self.logger.debug("매핑 규칙 발견",
-                           trace_id=event.trace_id,
-                           equip_tag=equip_tag,
-                           message_id=message_id,
-                           object=rule.object)
             
             casted_value = self._cast_value(value, rule.value_type)
             if casted_value is None:
-                self.logger.error("FAILED TO CAST VALUE",
-                                trace_id=event.trace_id,
-                                value=value,
-                                value_type=rule.value_type,
-                                equip_tag=equip_tag,
-                                message_id=message_id)
                 self._increment_error()
                 return None
             
-            self.logger.debug("VALUE CAST SUCCESSFUL",
-                           trace_id=event.trace_id,
-                           original_value=value,
-                           casted_value=casted_value,
-                           value_type=rule.value_type)
             
             # Create mapped event
             mapped_event = MappedEvent(
@@ -96,10 +65,6 @@ class MappingLayer(MappingLayerInterface):
                 value_type=ValueType(rule.value_type)
             )
             
-            self.logger.debug("매핑 완료",
-                           trace_id=event.trace_id,
-                           object=rule.object,
-                           value=casted_value)
             
             # Forward to resolver layer
             await self.resolver_callback(mapped_event)
@@ -108,9 +73,6 @@ class MappingLayer(MappingLayerInterface):
             
         except Exception as e:
             self._increment_error()
-            self.logger.error("Error mapping event", 
-                            error=str(e), 
-                            trace_id=event.trace_id)
             return None
     
     def _cast_value(self, value: any, value_type: str) -> any:
@@ -127,11 +89,6 @@ class MappingLayer(MappingLayerInterface):
                     return value.lower() in ('true', '1', 'yes', 'on')
                 return bool(value)
             else:
-                self.logger.warning("Unknown value type", value_type=value_type)
                 return value
         except (ValueError, TypeError) as e:
-            self.logger.error("Value casting failed", 
-                            value=value, 
-                            value_type=value_type, 
-                            error=str(e))
             return None

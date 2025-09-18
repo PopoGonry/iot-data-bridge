@@ -61,7 +61,6 @@ class IoTDataBridge:
             # Initialize layers
             await self._initialize_layers()
             
-            self.logger.info("IoT Data Bridge (MQTT Only) initialized successfully")
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -208,7 +207,6 @@ class IoTDataBridge:
     async def start(self):
         """Start the application"""
         self.running = True
-        self.logger.info("Starting IoT Data Bridge (MQTT Only)")
         
         try:
             # Start all layers
@@ -230,7 +228,6 @@ class IoTDataBridge:
     async def stop(self):
         """Stop the application"""
         self.running = False
-        self.logger.info("Stopping IoT Data Bridge (MQTT Only)")
         
         # Stop all layers
         if self.input_layer:
@@ -247,16 +244,12 @@ class IoTDataBridge:
         """Stop MQTT broker"""
         import subprocess
         try:
-            self.logger.info("Stopping MQTT broker...")
             subprocess.run(["pkill", "mosquitto"], check=False)
-            self.logger.info("MQTT broker stopped")
         except Exception as e:
-            self.logger.error("Error stopping MQTT broker", error=str(e))
     
     def setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown"""
         def signal_handler(signum, frame):
-            self.logger.info(f"Received signal {signum}, initiating shutdown")
             asyncio.create_task(self.stop())
         
         signal.signal(signal.SIGINT, signal_handler)

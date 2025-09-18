@@ -41,18 +41,11 @@ class ResolverLayer(ResolverLayerInterface):
         try:
             self._increment_processed()
             
-            self.logger.debug("디바이스 결정 중",
-                           trace_id=event.trace_id,
-                           object=event.object,
-                           value=event.value)
             
             # Get target devices for the object
             target_devices = self.device_catalog.get_devices_for_object(event.object)
             
             if not target_devices:
-                self.logger.warning("No target devices found for object",
-                                  trace_id=event.trace_id,
-                                  object=event.object)
                 self._increment_error()
                 return None
             

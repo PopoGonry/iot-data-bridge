@@ -76,16 +76,9 @@ class LoggingLayer(LoggingLayerInterface):
             # Write to log file
             await self._write_log(log_data)
             
-            self.logger.debug("Logged middleware event",
-                            trace_id=event.trace_id,
-                            object=event.object,
-                            send_devices=event.send_devices)
             
         except Exception as e:
             self._increment_error()
-            self.logger.error("Error logging middleware event", 
-                            error=str(e), 
-                            trace_id=event.trace_id)
     
     async def log_device_ingest(self, event: DeviceIngestLog):
         """Log device ingest event"""
@@ -102,16 +95,9 @@ class LoggingLayer(LoggingLayerInterface):
             # Write to log file
             await self._write_log(log_data)
             
-            self.logger.debug("Logged device ingest",
-                            device_id=event.device_id,
-                            object=event.object,
-                            value=event.value)
             
         except Exception as e:
             self._increment_error()
-            self.logger.error("Error logging device ingest", 
-                            error=str(e), 
-                            device_id=event.device_id)
     
     async def _write_log(self, log_data: dict):
         """Write log data to file"""
