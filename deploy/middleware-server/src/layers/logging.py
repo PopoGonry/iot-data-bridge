@@ -1,0 +1,130 @@
+"""
+Logging Layer - Handles event logging
+"""
+
+import asyncio
+import json
+import logging
+from pathlib import Path
+from typing import Optional
+import structlog
+
+from src.layers.base import LoggingLayerInterface
+from src.models.events import MiddlewareEventLog, DeviceIngestLog
+from src.models.config import LoggingConfig
+
+
+class LoggingLayer(LoggingLayerInterface):
+    """Logging Layer - Handles event logging"""
+    
+    def __init__(self, config: LoggingConfig):
+        super().__init__("logging_layer")
+        self.config = config
+        self.logger = structlog.get_logger("logging_layer")
+        self._setup_file_logging()
+    
+    def _setup_file_logging(self):
+        """Setup file logging"""
+        # Create logs directory if it doesn't exist
+        log_file = Path(self.config.file)
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Setup file handler
+        file_handler = logging.FileHandler(
+            self.config.file,
+            encoding='utf-8',
+            maxBytes=self.config.max_size,
+            backupCount=self.config.backup_count
+        )
+        file_handler.setLevel(getattr(logging, self.config.level.upper()))
+        
+        # Setup formatter
+        formatter = logging.Formatter('%(message)s')
+        file_handler.setFormatter(formatter)
+        
+        # Add handler to logger
+        self.logger.addHandler(file_handler)
+    
+    async def start(self):
+        """Start logging layer"""
+        self.logger.info("Starting logging layer")
+        self.is_running = True
+        self.logger.info("Logging layer started")
+    
+    async def stop(self):
+        """Stop logging layer"""
+        self.logger.info("Stopping logging layer")
+        self.is_running = False
+        self.logger.info("Logging layer stopped")
+    
+    async def log_middleware_event(self, event: MiddlewareEventLog):
+        """Log middleware event"""
+        try:
+            self._increment_processed()
+            
+            # Convert to dict for JSON serialization
+            log_data = {
+                "type": "middleware_event",
+                "timestamp": event.timestamp.isoformat(),
+                "trace_id": event.trace_id,
+                "raw": event.raw,
+                "object": event.object,
+                "send_devices": event.send_devices
+            }
+            
+            # Write to log file
+            await self._write_log(log_data)
+            
+            self.logger.debug("Logged middleware event",
+                            trace_id=event.trace_id,
+                            object=event.object,
+                            send_devices=event.send_devices)
+            
+        except Exception as e:
+            self._increment_error()
+            self.logger.error("Error logging middleware event", 
+                            error=str(e), 
+                            trace_id=event.trace_id)
+    
+    async def log_device_ingest(self, event: DeviceIngestLog):
+        """Log device ingest event"""
+        try:
+            self._increment_processed()
+            
+            # Convert to dict for JSON serialization
+            log_data = {
+                "type": "device_ingest",
+                "timestamp": event.timestamp.isoformat(),
+                "device_id": event.device_id,
+                "object": event.object,
+                "value": event.value
+            }
+            
+            # Write to log file
+            await self._write_log(log_data)
+            
+            self.logger.debug("Logged device ingest",
+                            device_id=event.device_id,
+                            object=event.object,
+                            value=event.value)
+            
+        except Exception as e:
+            self._increment_error()
+            self.logger.error("Error logging device ingest", 
+                            error=str(e), 
+                            device_id=event.device_id)
+    
+    async def _write_log(self, log_data: dict):
+        """Write log data to file"""
+        try:
+            # Convert to JSON string
+            log_line = json.dumps(log_data, ensure_ascii=False) + '\n'
+            
+            # Write to file (async file I/O)
+            log_file = Path(self.config.file)
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(log_line)
+                f.flush()
+            
+        except Exception as e:
+            self.logger.error("Error writing to log file", error=str(e))

@@ -1,0 +1,24 @@
+# Device Configuration - Multi VM Setup
+# 이 파일을 각 VM에 복사하고 IP 주소를 수정하세요
+
+device_id: "VM-A"  # 각 VM에 맞게 수정
+
+mqtt:
+  host: "192.168.1.100"  # MQTT 브로커 IP (실제 환경에 맞게 수정)
+  port: 1883
+  topic: "devices/vm-a/ingress"  # device_id에 맞게 수정
+  qos: 1
+  keepalive: 60
+  username: null
+  password: null
+
+# signalr:
+#   url: "http://192.168.1.100:5000/hub"  # SignalR Hub IP (실제 환경에 맞게 수정)
+#   group: "vm-a"
+#   target: "ingress"
+
+logging:
+  level: "INFO"
+  file: "device.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
