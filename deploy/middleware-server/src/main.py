@@ -9,18 +9,21 @@ import signal
 import sys
 from pathlib import Path
 
+# Add src directory to Python path
+sys.path.insert(0, str(Path(__file__).parent))
+
 import structlog
 import yaml
 
-from src.layers.input import InputLayer
-from src.layers.mapping import MappingLayer
-from src.layers.resolver import ResolverLayer
-from src.layers.transports import TransportsLayer
-from src.layers.logging import LoggingLayer
-from src.catalogs.mapping_catalog import MappingCatalog
-from src.catalogs.device_catalog import DeviceCatalog
-from src.models.config import AppConfig
-from src.models.events import IngressEvent, MappedEvent, ResolvedEvent, MiddlewareEventLog, DeviceIngestLog
+from layers.input import InputLayer
+from layers.mapping import MappingLayer
+from layers.resolver import ResolverLayer
+from layers.transports import TransportsLayer
+from layers.logging import LoggingLayer
+from catalogs.mapping_catalog import MappingCatalog
+from catalogs.device_catalog import DeviceCatalog
+from models.config import AppConfig
+from models.events import IngressEvent, MappedEvent, ResolvedEvent, MiddlewareEventLog, DeviceIngestLog
 
 
 class IoTDataBridge:

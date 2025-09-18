@@ -26,11 +26,27 @@ sudo apt-get install -y dotnet-sdk-6.0
 
 ### **4. 실행**
 ```bash
-# Linux/Mac
+# Linux/Mac (선택 메뉴)
 ./start.sh
 
-# Windows
-start.bat
+# Linux/Mac (MQTT만)
+./start-mqtt-only.sh
+
+# Linux/Mac (SignalR만)
+./start-signalr-only.sh
+
+# Windows (MQTT만)
+start-mqtt-only.bat
+
+# Windows (SignalR만)
+start-signalr-only.bat
+```
+
+### **5. 실행 권한 설정 (Linux/Mac)**
+```bash
+chmod +x start.sh
+chmod +x start-mqtt-only.sh
+chmod +x start-signalr-only.sh
 ```
 
 ## ⚙️ 설정

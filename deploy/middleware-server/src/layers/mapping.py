@@ -6,9 +6,9 @@ import asyncio
 from typing import Optional, Callable
 import structlog
 
-from src.layers.base import MappingLayerInterface
-from src.models.events import IngressEvent, MappedEvent, ValueType
-from src.catalogs.mapping_catalog import MappingCatalog
+from layers.base import MappingLayerInterface
+from models.events import IngressEvent, MappedEvent, ValueType
+from catalogs.mapping_catalog import MappingCatalog
 
 
 class MappingLayer(MappingLayerInterface):

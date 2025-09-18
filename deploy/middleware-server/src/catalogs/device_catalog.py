@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 import structlog
 
-from src.models.events import MappedEvent, ResolvedEvent
+from models.events import MappedEvent, ResolvedEvent
 
 
 class DeviceProfile:

@@ -6,9 +6,9 @@ import asyncio
 from typing import Optional, Callable
 import structlog
 
-from src.layers.base import ResolverLayerInterface
-from src.models.events import MappedEvent, ResolvedEvent, MiddlewareEventLog
-from src.catalogs.device_catalog import DeviceCatalog
+from layers.base import ResolverLayerInterface
+from models.events import MappedEvent, ResolvedEvent, MiddlewareEventLog
+from catalogs.device_catalog import DeviceCatalog
 
 
 class ResolverLayer(ResolverLayerInterface):

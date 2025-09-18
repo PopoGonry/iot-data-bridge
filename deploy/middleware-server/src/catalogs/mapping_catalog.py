@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 import structlog
 
-from src.models.events import IngressEvent, MappedEvent
+from models.events import IngressEvent, MappedEvent
 
 
 class MappingRule:

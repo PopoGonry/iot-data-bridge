@@ -1,26 +1,30 @@
 #!/bin/bash
 # IoT Data Bridge Middleware Server Start Script
 
-echo "Starting IoT Data Bridge Middleware Server..."
+echo "IoT Data Bridge Middleware Server"
+echo "================================="
+echo "1. MQTT Only"
+echo "2. SignalR Only"
+echo "3. Exit"
+echo ""
 
-# Create logs directory
-mkdir -p logs
+read -p "Select option (1-3): " choice
 
-# Start MQTT broker
-echo "Starting MQTT broker..."
-mosquitto -c mosquitto.conf -d
-
-# Start SignalR Hub
-echo "Starting SignalR Hub..."
-cd signalr_hub
-dotnet run &
-cd ..
-
-# Wait a moment for services to start
-sleep 3
-
-# Start IoT Data Bridge
-echo "Starting IoT Data Bridge..."
-python src/main.py --config config/app-multi-vm.yaml
-
-echo "All services started!"
+case $choice in
+    1)
+        echo "Starting MQTT Only mode..."
+        ./start-mqtt-only.sh
+        ;;
+    2)
+        echo "Starting SignalR Only mode..."
+        ./start-signalr-only.sh
+        ;;
+    3)
+        echo "Exiting..."
+        exit 0
+        ;;
+    *)
+        echo "Invalid option. Please select 1, 2, or 3."
+        exit 1
+        ;;
+esac
