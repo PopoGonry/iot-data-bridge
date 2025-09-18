@@ -50,11 +50,15 @@ class IoTDevice:
             )
             
             # Start MQTT client
+            self.logger.info("Connecting to MQTT broker", host=host, port=port)
             async with self.client:
+                self.logger.info("Connected to MQTT broker successfully")
+                
                 await self.client.subscribe(topic, qos=qos)
                 self.logger.info("Subscribed to MQTT topic", topic=topic)
                 
                 self.is_running = True
+                self.logger.info("Device is now listening for messages...")
                 
                 # Listen for messages
                 async for message in self.client.messages:
@@ -62,6 +66,10 @@ class IoTDevice:
                         break
                     
                     try:
+                        self.logger.info("Received raw MQTT message", 
+                                       topic=message.topic,
+                                       payload_size=len(message.payload),
+                                       qos=message.qos)
                         await self._handle_message(message)
                     except Exception as e:
                         self.logger.error("Error handling message", error=str(e))
@@ -174,11 +182,11 @@ async def main():
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
             structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.TimeStamper(fmt="%H:%M:%S"),
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer()
+            structlog.dev.ConsoleRenderer(colors=True)
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
