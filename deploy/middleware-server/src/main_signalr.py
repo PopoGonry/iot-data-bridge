@@ -99,13 +99,35 @@ class IoTDataBridge:
         )
         
         # Setup file logging
+        from logging.handlers import RotatingFileHandler
+        
+        # Create logs directory
+        log_file = Path(self.config.logging.file)
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Setup rotating file handler
+        file_handler = RotatingFileHandler(
+            self.config.logging.file,
+            encoding='utf-8',
+            maxBytes=self.config.logging.max_size,
+            backupCount=self.config.logging.backup_count
+        )
+        file_handler.setLevel(getattr(logging, self.config.logging.level.upper()))
+        
+        # Setup console handler
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(getattr(logging, self.config.logging.level.upper()))
+        
+        # Setup formatter
+        formatter = logging.Formatter('%(message)s')
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+        
+        # Configure logging
         logging.basicConfig(
             level=getattr(logging, self.config.logging.level.upper()),
             format='%(message)s',
-            handlers=[
-                logging.FileHandler(self.config.logging.file, encoding='utf-8'),
-                logging.StreamHandler(sys.stdout)
-            ]
+            handlers=[file_handler, console_handler]
         )
         
         self.logger = structlog.get_logger("iot_data_bridge_signalr")
