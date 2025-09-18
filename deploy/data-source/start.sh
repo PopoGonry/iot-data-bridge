@@ -1,7 +1,11 @@
 #!/bin/bash
 # Data Source Start Script
 
+# Change to script directory
+cd "$(dirname "$0")"
+
 echo "Starting Data Source..."
+echo "Working directory: $(pwd)"
 
 # Check if broker IP is provided
 if [ $# -eq 0 ]; then

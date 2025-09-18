@@ -1,7 +1,11 @@
 @echo off
 REM Data Source Start Script
 
+REM Change to script directory
+cd /d "%~dp0"
+
 echo Starting Data Source...
+echo Working directory: %CD%
 
 REM Check if broker IP is provided
 if "%1"=="" (
