@@ -242,6 +242,19 @@ class IoTDataBridge:
             await self.transports_layer.stop()
         if self.logging_layer:
             await self.logging_layer.stop()
+        
+        # Stop MQTT broker
+        self._stop_mqtt_broker()
+    
+    def _stop_mqtt_broker(self):
+        """Stop MQTT broker"""
+        import subprocess
+        try:
+            self.logger.info("Stopping MQTT broker...")
+            subprocess.run(["pkill", "mosquitto"], check=False)
+            self.logger.info("MQTT broker stopped")
+        except Exception as e:
+            self.logger.error("Error stopping MQTT broker", error=str(e))
     
     def setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown"""

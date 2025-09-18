@@ -28,7 +28,10 @@ echo "Starting MQTT broker..."
 # Kill existing mosquitto if running
 pkill mosquitto 2>/dev/null || true
 # Start with our configuration (all interfaces)
-mosquitto -c mosquitto.conf -d
+echo "Starting MQTT broker with config: mosquitto.conf"
+mosquitto -c mosquitto.conf -v &
+sleep 2
+echo "MQTT broker started"
 
 # Wait a moment for MQTT broker to start
 sleep 3
@@ -48,4 +51,7 @@ else
     exit 1
 fi
 
-echo "All services started!"
+echo "IoT Data Bridge stopped. Cleaning up..."
+# Stop MQTT broker
+pkill mosquitto 2>/dev/null || true
+echo "All services stopped!"
