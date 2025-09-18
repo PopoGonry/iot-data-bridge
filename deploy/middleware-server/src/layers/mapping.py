@@ -36,7 +36,7 @@ class MappingLayer(MappingLayerInterface):
         try:
             self._increment_processed()
             
-            self.logger.info("🔄 매핑 시작", trace_id=event.trace_id)
+            self.logger.info("매핑 시작", trace_id=event.trace_id)
             
             # Extract payload data
             payload = event.raw.get('payload', {})
@@ -46,26 +46,26 @@ class MappingLayer(MappingLayerInterface):
             
             # Validate required fields
             if not all([equip_tag, message_id, value is not None]):
-                self.logger.warning("❌ MISSING REQUIRED FIELDS",
-                                  trace_id=event.trace_id,
-                                  equip_tag=equip_tag,
-                                  message_id=message_id,
-                                  has_value=value is not None,
-                                  payload=payload)
+                self.logger.warning("MISSING REQUIRED FIELDS",
+                                 trace_id=event.trace_id,
+                                 equip_tag=equip_tag,
+                                 message_id=message_id,
+                                 has_value=value is not None,
+                                 payload=payload)
                 self._increment_error()
                 return None
             
             # Get mapping rule
             rule = self.mapping_catalog.get_mapping(equip_tag, message_id)
             if not rule:
-                self.logger.warning("❌ NO MAPPING RULE FOUND",
-                                  trace_id=event.trace_id,
-                                  equip_tag=equip_tag,
-                                  message_id=message_id)
+                self.logger.warning("NO MAPPING RULE FOUND",
+                                 trace_id=event.trace_id,
+                                 equip_tag=equip_tag,
+                                 message_id=message_id)
                 self._increment_error()
                 return None
             
-            self.logger.info("✅ 매핑 규칙 발견",
+            self.logger.info("매핑 규칙 발견",
                            trace_id=event.trace_id,
                            equip_tag=equip_tag,
                            message_id=message_id,
@@ -73,7 +73,7 @@ class MappingLayer(MappingLayerInterface):
             
             casted_value = self._cast_value(value, rule.value_type)
             if casted_value is None:
-                self.logger.error("❌ FAILED TO CAST VALUE",
+                self.logger.error("FAILED TO CAST VALUE",
                                 trace_id=event.trace_id,
                                 value=value,
                                 value_type=rule.value_type,
@@ -82,7 +82,7 @@ class MappingLayer(MappingLayerInterface):
                 self._increment_error()
                 return None
             
-            self.logger.info("✅ VALUE CAST SUCCESSFUL",
+            self.logger.info("VALUE CAST SUCCESSFUL",
                            trace_id=event.trace_id,
                            original_value=value,
                            casted_value=casted_value,
@@ -96,10 +96,10 @@ class MappingLayer(MappingLayerInterface):
                 value_type=ValueType(rule.value_type)
             )
             
-            self.logger.info("✅ 매핑 완료",
-                            trace_id=event.trace_id,
-                            object=rule.object,
-                            value=casted_value)
+            self.logger.info("매핑 완료",
+                           trace_id=event.trace_id,
+                           object=rule.object,
+                           value=casted_value)
             
             # Forward to resolver layer
             await self.resolver_callback(mapped_event)

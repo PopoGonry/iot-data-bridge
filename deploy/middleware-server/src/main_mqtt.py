@@ -90,7 +90,7 @@ class IoTDataBridge:
                 structlog.processors.StackInfoRenderer(),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                structlog.dev.ConsoleRenderer(colors=True)
+                structlog.dev.ConsoleRenderer(colors=False)
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -139,8 +139,6 @@ class IoTDataBridge:
         
         self.logger = structlog.get_logger("iot_data_bridge_mqtt")
         
-        # Add debug logger for data processing
-        self.debug_logger = structlog.get_logger("data_processing")
     
     async def _initialize_catalogs(self):
         """Initialize mapping and device catalogs"""
@@ -185,28 +183,14 @@ class IoTDataBridge:
     
     async def _handle_ingress_event(self, event: IngressEvent):
         """Handle ingress event from input layer"""
-        self.debug_logger.info("📥 수신 이벤트 처리", 
-                              trace_id=event.trace_id,
-                              equip_tag=event.raw.get('payload', {}).get('Equip.Tag'),
-                              message_id=event.raw.get('payload', {}).get('Message.ID'))
         await self.mapping_layer.map_event(event)
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
-        self.debug_logger.info("🔄 매핑 이벤트 처리", 
-                              trace_id=event.trace_id,
-                              object=event.object,
-                              value=event.value,
-                              value_type=event.value_type)
         await self.resolver_layer.resolve_event(event)
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
-        self.debug_logger.info("🎯 디바이스 전송 준비", 
-                              trace_id=event.trace_id,
-                              object=event.object,
-                              value=event.value,
-                              target_devices=event.target_devices)
         await self.transports_layer.send_to_devices(event)
     
     async def _log_middleware_event(self, event: MiddlewareEventLog):
