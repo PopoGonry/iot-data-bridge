@@ -24,7 +24,7 @@ echo "Starting MQTT broker..."
 # Kill existing mosquitto if running
 pkill mosquitto 2>/dev/null || true
 # Start with our configuration (all interfaces)
-mosquitto -c mosquitto.conf -d
+mosquitto -c $(pwd)/mosquitto.conf -d
 
 # Wait a moment for MQTT broker to start
 sleep 3
@@ -35,10 +35,10 @@ echo "Starting IoT Data Bridge (MQTT Only)..."
 # Try python3 first, then python
 if command -v python3 &> /dev/null; then
     echo "IoT Data Bridge is running... Press Ctrl+C to stop"
-    python3 src/main_mqtt.py
+    python3 $(pwd)/src/main_mqtt.py
 elif command -v python &> /dev/null; then
     echo "IoT Data Bridge is running... Press Ctrl+C to stop"
-    python src/main_mqtt.py
+    python $(pwd)/src/main_mqtt.py
 else
     echo "Error: Python not found. Please install Python 3.8 or higher."
     exit 1
