@@ -80,17 +80,20 @@ class IoTDataBridge:
     
     def _setup_logging(self):
         """Setup structured logging"""
+        # Custom formatter for clean logs (Device와 동일)
+        def simple_formatter(logger, method_name, event_dict):
+            """Simple formatter for clean logs"""
+            message = event_dict.get('event', '')
+            return message
+        
         structlog.configure(
             processors=[
                 structlog.stdlib.filter_by_level,
-                structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
-                structlog.stdlib.PositionalArgumentsFormatter(),
                 structlog.processors.TimeStamper(fmt="%H:%M:%S"),
-                structlog.processors.StackInfoRenderer(),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                structlog.dev.ConsoleRenderer(colors=False)
+                simple_formatter
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -112,20 +115,21 @@ class IoTDataBridge:
             maxBytes=self.config.logging.max_size,
             backupCount=self.config.logging.backup_count
         )
-        file_handler.setLevel(getattr(logging, self.config.logging.level.upper()))
+        file_handler.setLevel(logging.INFO)  # 파일에는 INFO 레벨만
         
         # Setup console handler
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, self.config.logging.level.upper()))
+        console_handler.setLevel(logging.DEBUG)  # 콘솔에는 모든 로그 표시
         
-        # Setup formatter for console (human readable)
+        # Setup formatters (Device와 동일한 포맷)
+        file_formatter = logging.Formatter(
+            '%(asctime)s | INFO | %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
         console_formatter = logging.Formatter(
-            '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
+            '%(asctime)s | %(levelname)-5s | %(message)s',
             datefmt='%H:%M:%S'
         )
-        
-        # Setup formatter for file (JSON)
-        file_formatter = logging.Formatter('%(message)s')
         
         file_handler.setFormatter(file_formatter)
         console_handler.setFormatter(console_formatter)

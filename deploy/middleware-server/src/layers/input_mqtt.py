@@ -28,7 +28,7 @@ class MQTTInputHandler:
     async def start(self):
         """Start MQTT client"""
         try:
-            self.logger.info("CONNECTING TO MQTT BROKER", 
+            self.logger.debug("CONNECTING TO MQTT BROKER", 
                            host=self.config.host, 
                            port=self.config.port, 
                            topic=self.config.topic)
@@ -43,15 +43,15 @@ class MQTTInputHandler:
             
             async with self.client:
                 self.is_running = True
-                self.logger.info("MQTT CLIENT CONNECTED", 
+                self.logger.debug("MQTT CLIENT CONNECTED", 
                                host=self.config.host, 
                                port=self.config.port, 
                                topic=self.config.topic)
                 
                 # Subscribe to topic
-                self.logger.info("TOPIC 구독 시작", topic=self.config.topic, qos=self.config.qos)
+                self.logger.debug("TOPIC 구독 시작", topic=self.config.topic, qos=self.config.qos)
                 await self.client.subscribe(self.config.topic, qos=self.config.qos)
-                self.logger.info("TOPIC 구독 완료", topic=self.config.topic)
+                self.logger.debug("TOPIC 구독 완료", topic=self.config.topic)
                 
                 async for message in self.client.messages:
                     if not self.is_running:
@@ -75,7 +75,7 @@ class MQTTInputHandler:
     async def _process_message(self, message):
         """Process incoming MQTT message"""
         try:
-            self.logger.info("MQTT 메시지 수신", 
+            self.logger.debug("MQTT 메시지 수신", 
                            topic=message.topic, 
                            size=len(message.payload), 
                            qos=message.qos)
@@ -97,7 +97,7 @@ class MQTTInputHandler:
                 }
             )
             
-            self.logger.info("데이터 파싱 완료", 
+            self.logger.debug("데이터 파싱 완료", 
                            trace_id=trace_id, 
                            equip_tag=payload.get('payload', {}).get('Equip.Tag'), 
                            message_id=payload.get('payload', {}).get('Message.ID'))

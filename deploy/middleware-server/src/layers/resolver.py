@@ -41,7 +41,7 @@ class ResolverLayer(ResolverLayerInterface):
         try:
             self._increment_processed()
             
-            self.logger.info("디바이스 결정 중",
+            self.logger.debug("디바이스 결정 중",
                            trace_id=event.trace_id,
                            object=event.object,
                            value=event.value)

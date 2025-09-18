@@ -36,7 +36,7 @@ class MappingLayer(MappingLayerInterface):
         try:
             self._increment_processed()
             
-            self.logger.info("매핑 시작", trace_id=event.trace_id)
+            self.logger.debug("매핑 시작", trace_id=event.trace_id)
             
             # Extract payload data
             payload = event.raw.get('payload', {})
@@ -65,7 +65,7 @@ class MappingLayer(MappingLayerInterface):
                 self._increment_error()
                 return None
             
-            self.logger.info("매핑 규칙 발견",
+            self.logger.debug("매핑 규칙 발견",
                            trace_id=event.trace_id,
                            equip_tag=equip_tag,
                            message_id=message_id,
@@ -82,7 +82,7 @@ class MappingLayer(MappingLayerInterface):
                 self._increment_error()
                 return None
             
-            self.logger.info("VALUE CAST SUCCESSFUL",
+            self.logger.debug("VALUE CAST SUCCESSFUL",
                            trace_id=event.trace_id,
                            original_value=value,
                            casted_value=casted_value,
@@ -96,7 +96,7 @@ class MappingLayer(MappingLayerInterface):
                 value_type=ValueType(rule.value_type)
             )
             
-            self.logger.info("매핑 완료",
+            self.logger.debug("매핑 완료",
                            trace_id=event.trace_id,
                            object=rule.object,
                            value=casted_value)
