@@ -6,7 +6,14 @@
 
 ### **1. 의존성 설치**
 ```bash
+# 가상환경 활성화 (권장)
+source .venv/bin/activate  # 또는 python -m venv .venv
+
+# 의존성 설치
 pip install -r requirements.txt
+
+# 또는 개별 설치
+pip install structlog aiomqtt pydantic pyyaml
 ```
 
 ### **2. MQTT 브로커 설치 (Ubuntu/Debian)**

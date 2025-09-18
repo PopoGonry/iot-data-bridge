@@ -3,6 +3,17 @@
 
 echo "Starting IoT Data Bridge Middleware Server (MQTT Only)..."
 
+# Check if virtual environment exists and activate it
+if [ -d ".venv" ]; then
+    echo "Activating virtual environment..."
+    source .venv/bin/activate
+elif [ -d "venv" ]; then
+    echo "Activating virtual environment..."
+    source venv/bin/activate
+else
+    echo "Warning: No virtual environment found. Using system Python."
+fi
+
 # Create logs directory
 mkdir -p logs
 
@@ -18,9 +29,9 @@ echo "Starting IoT Data Bridge (MQTT Only)..."
 
 # Try python3 first, then python
 if command -v python3 &> /dev/null; then
-    python3 src/main.py --config config/app-mqtt.yaml
+    python3 src/main_mqtt.py
 elif command -v python &> /dev/null; then
-    python src/main.py --config config/app-mqtt.yaml
+    python src/main_mqtt.py
 else
     echo "Error: Python not found. Please install Python 3.8 or higher."
     exit 1

@@ -9,7 +9,14 @@ from typing import Optional, Callable, Any
 import structlog
 
 from aiomqtt import Client as MQTTClient
-from signalrcore import HubConnectionBuilder
+
+# SignalR import (optional)
+try:
+    from signalrcore import HubConnectionBuilder
+    SIGNALR_AVAILABLE = True
+except ImportError:
+    SIGNALR_AVAILABLE = False
+    HubConnectionBuilder = None
 
 from layers.base import InputLayerInterface
 from models.events import IngressEvent
@@ -106,6 +113,9 @@ class SignalRInputHandler:
     """SignalR input handler"""
     
     def __init__(self, config, callback: Callable[[IngressEvent], None]):
+        if not SIGNALR_AVAILABLE:
+            raise ImportError("SignalR not available. Install signalrcore package.")
+        
         self.config = config
         self.callback = callback
         self.logger = structlog.get_logger("signalr_input")
@@ -114,6 +124,9 @@ class SignalRInputHandler:
     
     async def start(self):
         """Start SignalR connection"""
+        if not SIGNALR_AVAILABLE:
+            raise ImportError("SignalR not available. Install signalrcore package.")
+            
         try:
             # Build connection
             builder = HubConnectionBuilder()
@@ -215,6 +228,9 @@ class InputLayer(InputLayerInterface):
                 )
                 
             elif self.config.type == "signalr":
+                if not SIGNALR_AVAILABLE:
+                    raise ImportError("SignalR not available. Install signalrcore package.")
+                
                 if not self.config.signalr:
                     raise ValueError("SignalR configuration is required for SignalR input type")
                 

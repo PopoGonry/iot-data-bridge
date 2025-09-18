@@ -8,7 +8,14 @@ from typing import Optional, Callable, List
 import structlog
 
 from aiomqtt import Client as MQTTClient
-from signalrcore import HubConnectionBuilder
+
+# SignalR import (optional)
+try:
+    from signalrcore import HubConnectionBuilder
+    SIGNALR_AVAILABLE = True
+except ImportError:
+    SIGNALR_AVAILABLE = False
+    HubConnectionBuilder = None
 
 from layers.base import TransportsLayerInterface
 from models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog
