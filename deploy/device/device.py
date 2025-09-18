@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IoT Device - Simple device that receives data via MQTT and logs it
+IoT Device - Simulates a device receiving data from middleware
 """
 
 import asyncio
@@ -8,21 +8,21 @@ import json
 import sys
 import yaml
 from pathlib import Path
-from datetime import datetime
+from typing import Dict, Any, Optional
 import structlog
 from aiomqtt import Client
 
 
 class IoTDevice:
-    """Simple IoT Device that receives data and logs it"""
+    """IoT Device that receives data from middleware"""
     
-    def __init__(self, device_id: str, config: dict):
+    def __init__(self, device_id: str, config: Dict[str, Any]):
         self.device_id = device_id
         self.config = config
-        self.logger = structlog.get_logger(f"device_{device_id}")
-        self.is_running = False
         self.client = None
+        self.is_running = False
         self.data_count = 0
+        self.logger = structlog.get_logger(f"device_{device_id}")
     
     async def start(self):
         """Start the device"""
@@ -55,33 +55,32 @@ class IoTDevice:
                            host=host, 
                            port=port, 
                            topic=topic,
-                           keepalive=self.config.get('mqtt', {}).get('keepalive', 60))
+                           keepalive=mqtt_config.get('keepalive', 60))
             
-            try:
-                async with self.client:
-                    self.logger.info("✅ MQTT 브로커 연결 성공", host=host, port=port)
+            async with self.client:
+                self.logger.info("✅ MQTT 브로커 연결 성공", host=host, port=port)
+                
+                self.logger.info("📡 MQTT 토픽 구독 시작", topic=topic, qos=qos)
+                await self.client.subscribe(topic, qos=qos)
+                self.logger.info("✅ MQTT 토픽 구독 완료", topic=topic)
+                
+                self.is_running = True
+                self.logger.info("🎧 디바이스가 메시지 수신 대기 중...")
+                
+                # Listen for messages
+                async for message in self.client.messages:
+                    if not self.is_running:
+                        break
                     
-                    self.logger.info("📡 MQTT 토픽 구독 시작", topic=topic, qos=qos)
-                    await self.client.subscribe(topic, qos=qos)
-                    self.logger.info("✅ MQTT 토픽 구독 완료", topic=topic)
-                    
-                    self.is_running = True
-                    self.logger.info("🎧 디바이스가 메시지 수신 대기 중...")
-                    
-                    # Listen for messages
-                    async for message in self.client.messages:
-                        if not self.is_running:
-                            break
+                    try:
+                        self.logger.info("📬 원시 MQTT 메시지 수신", 
+                                       topic=message.topic,
+                                       payload_size=len(message.payload),
+                                       qos=message.qos)
+                        await self._handle_message(message)
+                    except Exception as e:
+                        self.logger.error("Error handling message", error=str(e))
                         
-                        try:
-                            self.logger.info("📬 원시 MQTT 메시지 수신", 
-                                           topic=message.topic,
-                                           payload_size=len(message.payload),
-                                           qos=message.qos)
-                            await self._handle_message(message)
-                        except Exception as e:
-                            self.logger.error("Error handling message", error=str(e))
-                            
         except Exception as e:
             self.logger.error("❌ Device 연결 실패", 
                             error=str(e), 
@@ -134,62 +133,32 @@ class IoTDevice:
 
 async def main():
     """Main function"""
-    # Parse command line arguments
     if len(sys.argv) < 2:
         print("Usage: python device.py <device_id> [config_file]")
-        print("       python device.py <device_id> [mqtt_host] [mqtt_port]")
-        print("Example: python device.py VM-A")
-        print("Example: python device.py VM-A device_config.yaml")
-        print("Example: python device.py VM-A localhost 1883")
         sys.exit(1)
     
     device_id = sys.argv[1]
+    config_file = sys.argv[2] if len(sys.argv) > 2 else "device_config.yaml"
     
-    # Check if second argument is a config file or mqtt_host
-    if len(sys.argv) > 2 and sys.argv[2].endswith('.yaml'):
-        # Load from config file
-        config_path = sys.argv[2]
-        config_file = Path(config_path)
-        
-        if not config_file.exists():
-            print(f"Config file not found: {config_path}")
-            sys.exit(1)
-        
-        with open(config_file, 'r', encoding='utf-8') as f:
-            config_data = yaml.safe_load(f)
-        
-        device_config = config_data
-        print(f"Loaded configuration from {config_path}")
-        
-    else:
-        # Use command line arguments
-        mqtt_host = sys.argv[2] if len(sys.argv) > 2 else "localhost"
-        mqtt_port = int(sys.argv[3]) if len(sys.argv) > 3 else 1883
-        
-        device_config = {
-            'mqtt': {
-                'host': mqtt_host,
-                'port': mqtt_port,
-                'topic': f'devices/{device_id.lower()}/ingress',
-                'qos': 1,
-                'keepalive': 60
-            }
-        }
-        print(f"Using command line configuration")
+    print(f"Starting IoT Device: {device_id}")
+    print(f"Config file: {config_file}")
     
-    # Override device_id in config
-    device_config['device_id'] = device_id
+    # Load configuration
+    config_path = Path(config_file)
+    if not config_path.exists():
+        print(f"Error: Config file not found: {config_file}")
+        sys.exit(1)
     
-    # Ensure topic is set correctly
-    if 'mqtt' not in device_config:
-        device_config['mqtt'] = {}
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
     
-    if 'topic' not in device_config['mqtt']:
-        device_config['mqtt']['topic'] = f'devices/{device_id.lower()}/ingress'
+    # Override device_id from command line
+    config['device_id'] = device_id
     
+    print(f"Loaded configuration from {config_file}")
     print(f"Device {device_id} configuration:")
-    print(f"  - MQTT Host: {device_config['mqtt'].get('host', 'localhost')}:{device_config['mqtt'].get('port', 1883)}")
-    print(f"  - Topic: {device_config['mqtt']['topic']}")
+    print(f"  - MQTT Host: {config['mqtt']['host']}:{config['mqtt']['port']}")
+    print(f"  - Topic: {config['mqtt']['topic']}")
     
     # Setup logging
     structlog.configure(
@@ -212,7 +181,7 @@ async def main():
     
     # Create and start device
     print(f"Creating device instance for {device_id}...")
-    device = IoTDevice(device_id, device_config)
+    device = IoTDevice(device_id, config)
     
     try:
         print(f"Starting device {device_id}...")
