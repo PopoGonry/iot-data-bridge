@@ -183,6 +183,49 @@ async def main():
     print(f"  - Topic: {config['mqtt']['topic']}")
     
     # Setup logging
+    import logging
+    from logging.handlers import RotatingFileHandler
+    from pathlib import Path
+    
+    # Create logs directory
+    logs_dir = Path("logs")
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Setup file handler
+    log_file = logs_dir / config.get('logging', {}).get('file', 'device.log')
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=config.get('logging', {}).get('max_size', 10485760),  # 10MB
+        backupCount=config.get('logging', {}).get('backup_count', 5),
+        encoding='utf-8'
+    )
+    file_handler.setLevel(logging.INFO)
+    
+    # Setup console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    
+    # Setup formatters
+    file_formatter = logging.Formatter(
+        '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    console_formatter = logging.Formatter(
+        '%(asctime)s | %(levelname)-8s | %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    file_handler.setFormatter(file_formatter)
+    console_handler.setFormatter(console_formatter)
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[file_handler, console_handler],
+        force=True
+    )
+    
+    # Configure structlog
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
