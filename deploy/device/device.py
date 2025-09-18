@@ -195,14 +195,18 @@ async def main():
     )
     
     # Create and start device
+    print(f"Creating device instance for {device_id}...")
     device = IoTDevice(device_id, device_config)
     
     try:
+        print(f"Starting device {device_id}...")
         await device.start()
     except KeyboardInterrupt:
         print(f"\nShutting down {device_id} Device...")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error starting device: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         await device.stop()
 

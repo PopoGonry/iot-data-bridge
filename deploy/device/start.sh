@@ -56,7 +56,16 @@ if [ $? -ne 0 ]; then
         echo "Error: Failed to install dependencies"
         exit 1
     fi
+else
+    echo "Dependencies are already installed"
+fi
+
+# Check if device.py exists
+if [ ! -f "device.py" ]; then
+    echo "Error: device.py not found in current directory"
+    exit 1
 fi
 
 echo "Starting device..."
+echo "Command: $PYTHON_CMD device.py $DEVICE_ID $CONFIG_FILE"
 $PYTHON_CMD device.py $DEVICE_ID $CONFIG_FILE
