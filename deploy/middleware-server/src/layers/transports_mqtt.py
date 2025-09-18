@@ -122,9 +122,14 @@ class TransportsLayer(TransportsLayerInterface):
                     continue
                 
                 # Create transport config
+                mqtt_config = device_profile.get_transport_config('mqtt')
+                if not mqtt_config:
+                    self.logger.warning("MQTT config not found for device", device_id=device_id)
+                    continue
+                    
                 transport_config = TransportConfig(
                     type=TransportType.MQTT,
-                    config=device_profile.mqtt_config
+                    config=mqtt_config
                 )
                 
                 # Create device target
