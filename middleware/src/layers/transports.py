@@ -10,10 +10,10 @@ import structlog
 from aiomqtt import Client as MQTTClient
 from signalrcore import HubConnectionBuilder
 
-from layers.base import TransportsLayerInterface
-from models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog
-from models.config import TransportsConfig
-from catalogs.device_catalog import DeviceCatalog
+from src.layers.base import TransportsLayerInterface
+from src.models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog
+from src.models.config import TransportsConfig
+from src.catalogs.device_catalog import DeviceCatalog
 
 
 class MQTTTransport:

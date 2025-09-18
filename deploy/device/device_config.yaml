@@ -6,7 +6,7 @@ device_id: "VM-A"
 
 # MQTT Configuration
 mqtt:
-  host: "192.168.32.102"     # MQTT broker host
+  host: "localhost"           # MQTT broker host
   port: 1883                 # MQTT broker port
   topic: "devices/vm-a/ingress"  # Will be auto-generated from device_id
   qos: 1                     # MQTT QoS level

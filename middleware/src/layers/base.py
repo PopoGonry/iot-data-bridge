@@ -7,7 +7,7 @@ from typing import Any, Optional
 import asyncio
 import structlog
 
-from models.events import LayerResult, LayerStatus
+from src.models.events import LayerResult, LayerStatus
 
 
 class BaseLayer(ABC):
