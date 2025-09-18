@@ -36,7 +36,7 @@ class MappingLayer(MappingLayerInterface):
         try:
             self._increment_processed()
             
-            self.logger.debug("Mapping event", trace_id=event.trace_id)
+            self.logger.info("🔄 MAPPING EVENT STARTED", trace_id=event.trace_id, raw_data=event.raw)
             
             # Extract payload data
             payload = event.raw.get('payload', {})
@@ -46,23 +46,30 @@ class MappingLayer(MappingLayerInterface):
             
             # Validate required fields
             if not all([equip_tag, message_id, value is not None]):
-                self.logger.warning("Missing required fields in payload",
+                self.logger.warning("❌ MISSING REQUIRED FIELDS",
                                   trace_id=event.trace_id,
                                   equip_tag=equip_tag,
                                   message_id=message_id,
-                                  has_value=value is not None)
+                                  has_value=value is not None,
+                                  payload=payload)
                 self._increment_error()
                 return None
             
             # Get mapping rule
             rule = self.mapping_catalog.get_mapping(equip_tag, message_id)
             if not rule:
-                self.logger.warning("No mapping rule found",
+                self.logger.warning("❌ NO MAPPING RULE FOUND",
                                   trace_id=event.trace_id,
                                   equip_tag=equip_tag,
                                   message_id=message_id)
                 self._increment_error()
                 return None
+            
+            self.logger.info("✅ MAPPING RULE FOUND",
+                           trace_id=event.trace_id,
+                           equip_tag=equip_tag,
+                           message_id=message_id,
+                           rule=rule.dict())
             
             # Cast value to specified type
             casted_value = self._cast_value(value, rule.value_type)
