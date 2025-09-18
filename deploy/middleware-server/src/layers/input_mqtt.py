@@ -75,10 +75,10 @@ class MQTTInputHandler:
     async def _process_message(self, message):
         """Process incoming MQTT message"""
         try:
-                self.logger.info("MQTT 메시지 수신", 
-                               topic=message.topic, 
-                               size=len(message.payload), 
-                               qos=message.qos)
+            self.logger.info("MQTT 메시지 수신", 
+                           topic=message.topic, 
+                           size=len(message.payload), 
+                           qos=message.qos)
             
             # Parse message payload
             payload = json.loads(message.payload.decode('utf-8'))
