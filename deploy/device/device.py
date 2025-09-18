@@ -123,11 +123,10 @@ class IoTDevice:
             # Extract data
             object_name = payload.get('object')
             value = payload.get('value')
-            timestamp = payload.get('timestamp')
             
-            print(f"[DEBUG] Parsed data - Object: {object_name}, Value: {value}, Timestamp: {timestamp}")
+            print(f"[DEBUG] Parsed data - Object: {object_name}, Value: {value}")
             
-            if not all([object_name, value is not None, timestamp]):
+            if not all([object_name, value is not None]):
                 print(f"[DEBUG] ❌ Invalid message format: {payload}")
                 self.logger.warning("Invalid message format", payload=payload)
                 return
@@ -142,7 +141,6 @@ class IoTDevice:
                            device_id=self.device_id,
                            object=object_name,
                            value=value,
-                           timestamp=timestamp,
                            count=self.data_count)
             
         except json.JSONDecodeError as e:
@@ -235,7 +233,7 @@ async def main():
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.dev.ConsoleRenderer(colors=True)
+            structlog.dev.ConsoleRenderer(colors=False)  # 색상 비활성화
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),

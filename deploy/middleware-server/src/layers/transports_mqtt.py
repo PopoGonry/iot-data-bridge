@@ -42,8 +42,7 @@ class MQTTTransport:
             # Prepare payload
             payload = {
                 "object": device_target.object,
-                "value": device_target.value,
-                "timestamp": asyncio.get_event_loop().time()
+                "value": device_target.value
             }
             
             # Send message
