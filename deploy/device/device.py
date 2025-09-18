@@ -54,27 +54,22 @@ class IoTDevice:
         )
         
         print(f"[DEBUG] Connecting to MQTT broker...")
-        self.logger.info("🔌 MQTT 브로커 연결 중", host=host, port=port)
-        self.logger.info("🔍 연결 정보", 
-                       host=host, 
-                       port=port, 
-                       topic=topic,
-                       keepalive=mqtt_config.get('keepalive', 60))
+        self.logger.debug("MQTT 브로커 연결 중", host=host, port=port)
         
         try:
             async with self.client:
                 print(f"[DEBUG] ✅ Connected to MQTT broker!")
-                self.logger.info("✅ MQTT 브로커 연결 성공", host=host, port=port)
+                self.logger.debug("MQTT 브로커 연결 성공", host=host, port=port)
                 
                 print(f"[DEBUG] Subscribing to topic: {topic}")
-                self.logger.info("📡 MQTT 토픽 구독 시작", topic=topic, qos=qos)
+                self.logger.debug("MQTT 토픽 구독 시작", topic=topic, qos=qos)
                 await self.client.subscribe(topic, qos=qos)
                 print(f"[DEBUG] ✅ Subscribed to topic: {topic}")
-                self.logger.info("✅ MQTT 토픽 구독 완료", topic=topic)
+                self.logger.debug("MQTT 토픽 구독 완료", topic=topic)
                 
                 self.is_running = True
                 print(f"[DEBUG] 🎧 Device is now listening for messages...")
-                self.logger.info("🎧 디바이스가 메시지 수신 대기 중...")
+                self.logger.info("디바이스가 메시지 수신 대기 중")
                 
                 # Listen for messages
                 async for message in self.client.messages:
@@ -83,7 +78,7 @@ class IoTDevice:
                     
                     try:
                         print(f"[DEBUG] 📬 Raw MQTT message received: {message.topic}")
-                        self.logger.info("📬 원시 MQTT 메시지 수신", 
+                        self.logger.debug("원시 MQTT 메시지 수신", 
                                        topic=message.topic,
                                        payload_size=len(message.payload),
                                        qos=message.qos)
@@ -95,15 +90,11 @@ class IoTDevice:
         except Exception as e:
             print(f"[DEBUG] ❌ Connection failed: {e}")
             print(f"[DEBUG] Error type: {type(e).__name__}")
-            self.logger.error("❌ Device 연결 실패", 
+            self.logger.error("Device 연결 실패", 
                             error=str(e), 
                             error_type=type(e).__name__,
                             host=host, 
                             port=port)
-            self.logger.error("🔍 문제 해결 방법:", 
-                            message="1. MQTT 브로커가 실행 중인지 확인",
-                            message2="2. 포트 1883이 열려있는지 확인", 
-                            message3="3. 방화벽 설정 확인")
             raise
     
     async def stop(self):
@@ -137,7 +128,7 @@ class IoTDevice:
             print(f"[DEBUG] 📨 Device received data - Count: {self.data_count}")
             
             # Log received data
-            self.logger.info("📨 디바이스가 데이터 수신",
+            self.logger.info("데이터 수신",
                            device_id=self.device_id,
                            object=object_name,
                            value=value,
@@ -200,11 +191,11 @@ async def main():
     
     # Setup console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.DEBUG)  # 콘솔에는 모든 로그 표시
     
     # Setup formatters
     file_formatter = logging.Formatter(
-        '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
+        '%(asctime)s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     console_formatter = logging.Formatter(
