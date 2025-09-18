@@ -86,11 +86,11 @@ class IoTDataBridge:
                 structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
                 structlog.stdlib.PositionalArgumentsFormatter(),
-                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.processors.TimeStamper(fmt="%H:%M:%S"),
                 structlog.processors.StackInfoRenderer(),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                structlog.processors.JSONRenderer()
+                structlog.dev.ConsoleRenderer(colors=True)
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -118,10 +118,17 @@ class IoTDataBridge:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(getattr(logging, self.config.logging.level.upper()))
         
-        # Setup formatter
-        formatter = logging.Formatter('%(message)s')
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
+        # Setup formatter for console (human readable)
+        console_formatter = logging.Formatter(
+            '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
+            datefmt='%H:%M:%S'
+        )
+        
+        # Setup formatter for file (JSON)
+        file_formatter = logging.Formatter('%(message)s')
+        
+        file_handler.setFormatter(file_formatter)
+        console_handler.setFormatter(console_formatter)
         
         # Configure logging
         logging.basicConfig(

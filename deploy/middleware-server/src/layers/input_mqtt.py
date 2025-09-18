@@ -74,9 +74,9 @@ class MQTTInputHandler:
     async def _process_message(self, message):
         """Process incoming MQTT message"""
         try:
-            self.logger.info("🔍 RAW MQTT MESSAGE RECEIVED",
+            self.logger.info("📨 MQTT 메시지 수신",
                            topic=message.topic,
-                           payload_size=len(message.payload),
+                           size=len(message.payload),
                            qos=message.qos)
             
             # Parse message payload
@@ -84,11 +84,6 @@ class MQTTInputHandler:
             
             # Generate trace ID
             trace_id = str(uuid.uuid4())
-            
-            self.logger.info("📨 MQTT MESSAGE PARSED",
-                           trace_id=trace_id,
-                           topic=message.topic,
-                           payload=payload)
             
             # Create ingress event
             ingress_event = IngressEvent(
@@ -101,16 +96,13 @@ class MQTTInputHandler:
                 }
             )
             
-            self.logger.info("📥 INGRESS EVENT CREATED",
+            self.logger.info("📥 데이터 파싱 완료",
                            trace_id=trace_id,
-                           raw_data=payload)
+                           equip_tag=payload.get('payload', {}).get('Equip.Tag'),
+                           message_id=payload.get('payload', {}).get('Message.ID'))
             
             # Send to mapping layer
-            self.logger.info("🔄 SENDING TO MAPPING LAYER",
-                           trace_id=trace_id)
             await self.callback(ingress_event)
-            self.logger.info("✅ MAPPING LAYER CALLBACK COMPLETED",
-                           trace_id=trace_id)
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in MQTT message", error=str(e))

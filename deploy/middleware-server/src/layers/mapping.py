@@ -36,7 +36,7 @@ class MappingLayer(MappingLayerInterface):
         try:
             self._increment_processed()
             
-            self.logger.info("🔄 MAPPING EVENT STARTED", trace_id=event.trace_id, raw_data=event.raw)
+            self.logger.info("🔄 매핑 시작", trace_id=event.trace_id)
             
             # Extract payload data
             payload = event.raw.get('payload', {})
@@ -65,16 +65,15 @@ class MappingLayer(MappingLayerInterface):
                 self._increment_error()
                 return None
             
-            self.logger.info("✅ MAPPING RULE FOUND",
+            self.logger.info("✅ 매핑 규칙 발견",
                            trace_id=event.trace_id,
                            equip_tag=equip_tag,
                            message_id=message_id,
-                           rule=rule.dict())
+                           object=rule.object)
             
-            # Cast value to specified type
             casted_value = self._cast_value(value, rule.value_type)
             if casted_value is None:
-                self.logger.error("Failed to cast value",
+                self.logger.error("❌ FAILED TO CAST VALUE",
                                 trace_id=event.trace_id,
                                 value=value,
                                 value_type=rule.value_type,
@@ -82,6 +81,12 @@ class MappingLayer(MappingLayerInterface):
                                 message_id=message_id)
                 self._increment_error()
                 return None
+            
+            self.logger.info("✅ VALUE CAST SUCCESSFUL",
+                           trace_id=event.trace_id,
+                           original_value=value,
+                           casted_value=casted_value,
+                           value_type=rule.value_type)
             
             # Create mapped event
             mapped_event = MappedEvent(
@@ -91,11 +96,10 @@ class MappingLayer(MappingLayerInterface):
                 value_type=ValueType(rule.value_type)
             )
             
-            self.logger.debug("Successfully mapped event",
+            self.logger.info("✅ 매핑 완료",
                             trace_id=event.trace_id,
                             object=rule.object,
-                            value=casted_value,
-                            value_type=rule.value_type)
+                            value=casted_value)
             
             # Forward to resolver layer
             await self.resolver_callback(mapped_event)
