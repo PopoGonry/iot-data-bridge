@@ -10,6 +10,8 @@ if [ -d ".venv" ]; then
 elif [ -d "venv" ]; then
     echo "Activating virtual environment..."
     source venv/bin/activate
+elif [ -n "$VIRTUAL_ENV" ]; then
+    echo "Virtual environment already active: $VIRTUAL_ENV"
 else
     echo "Warning: No virtual environment found. Using system Python."
 fi
