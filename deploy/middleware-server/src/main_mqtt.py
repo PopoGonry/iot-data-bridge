@@ -131,6 +131,9 @@ class IoTDataBridge:
         )
         
         self.logger = structlog.get_logger("iot_data_bridge_mqtt")
+        
+        # Add debug logger for data processing
+        self.debug_logger = structlog.get_logger("data_processing")
     
     async def _initialize_catalogs(self):
         """Initialize mapping and device catalogs"""
@@ -175,14 +178,26 @@ class IoTDataBridge:
     
     async def _handle_ingress_event(self, event: IngressEvent):
         """Handle ingress event from input layer"""
+        self.debug_logger.info("📥 INGRESS EVENT RECEIVED", 
+                              trace_id=event.trace_id,
+                              raw_data=event.raw,
+                              meta=event.meta)
         await self.mapping_layer.map_event(event)
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
+        self.debug_logger.info("🔄 MAPPED EVENT PROCESSED", 
+                              trace_id=event.trace_id,
+                              mapped_data=event.mapped,
+                              mapping_rule=event.mapping_rule)
         await self.resolver_layer.resolve_event(event)
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
+        self.debug_logger.info("🎯 RESOLVED EVENT READY", 
+                              trace_id=event.trace_id,
+                              target_devices=event.target_devices,
+                              resolved_data=event.resolved)
         await self.transports_layer.send_to_devices(event)
     
     async def _log_middleware_event(self, event: MiddlewareEventLog):

@@ -54,10 +54,11 @@ class MQTTTransport:
                     qos=device_config.get('qos', 1)
                 )
             
-            self.logger.debug("Sent MQTT message to device",
+            self.logger.info("📤 MESSAGE SENT TO DEVICE",
                             device_id=device_target.device_id,
                             topic=topic,
-                            object=device_target.object)
+                            object=device_target.object,
+                            payload=payload)
             
             return True
             

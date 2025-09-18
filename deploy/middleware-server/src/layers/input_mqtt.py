@@ -85,9 +85,10 @@ class MQTTInputHandler:
             # Send to mapping layer
             await self.callback(ingress_event)
             
-            self.logger.debug("Processed MQTT message", 
-                            trace_id=trace_id,
-                            topic=message.topic)
+            self.logger.info("📨 MQTT MESSAGE RECEIVED",
+                           trace_id=trace_id,
+                           topic=message.topic,
+                           payload=payload)
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in MQTT message", error=str(e))
