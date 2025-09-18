@@ -81,18 +81,18 @@ class IoTDevice:
                             await self._handle_message(message)
                         except Exception as e:
                             self.logger.error("Error handling message", error=str(e))
-                        
-        except Exception as e:
-            self.logger.error("❌ Device 연결 실패", 
-                            error=str(e), 
-                            error_type=type(e).__name__,
-                            host=host, 
-                            port=port)
-            self.logger.error("🔍 문제 해결 방법:", 
-                            message="1. MQTT 브로커가 실행 중인지 확인",
-                            message2="2. 포트 1883이 열려있는지 확인", 
-                            message3="3. 방화벽 설정 확인")
-            raise
+                            
+            except Exception as e:
+                self.logger.error("❌ Device 연결 실패", 
+                                error=str(e), 
+                                error_type=type(e).__name__,
+                                host=host, 
+                                port=port)
+                self.logger.error("🔍 문제 해결 방법:", 
+                                message="1. MQTT 브로커가 실행 중인지 확인",
+                                message2="2. 포트 1883이 열려있는지 확인", 
+                                message3="3. 방화벽 설정 확인")
+                raise
     
     async def stop(self):
         """Stop the device"""
