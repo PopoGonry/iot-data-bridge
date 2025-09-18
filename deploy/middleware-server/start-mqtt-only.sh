@@ -29,9 +29,17 @@ echo "Starting MQTT broker..."
 pkill mosquitto 2>/dev/null || true
 # Start with our configuration (all interfaces)
 echo "Starting MQTT broker with config: mosquitto.conf"
-mosquitto -c mosquitto.conf -v &
-sleep 2
+nohup mosquitto -c mosquitto.conf -v > mosquitto.log 2>&1 &
+sleep 3
 echo "MQTT broker started"
+# Check if MQTT broker is running
+if pgrep mosquitto > /dev/null; then
+    echo "MQTT broker is running"
+    netstat -tlnp | grep 1883
+else
+    echo "Error: MQTT broker failed to start"
+    exit 1
+fi
 
 # Wait a moment for MQTT broker to start
 sleep 3
