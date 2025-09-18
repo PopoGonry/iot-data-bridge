@@ -26,10 +26,11 @@ mkdir -p logs
 # Start MQTT broker
 echo "Starting MQTT broker..."
 # Kill existing mosquitto if running
-pkill mosquitto 2>/dev/null || true
+sudo pkill mosquitto 2>/dev/null || true
+sleep 1
 # Start with our configuration (all interfaces)
 echo "Starting MQTT broker with config: mosquitto.conf"
-nohup mosquitto -c mosquitto.conf -v > mosquitto.log 2>&1 &
+sudo mosquitto -c mosquitto.conf -v &
 sleep 3
 echo "MQTT broker started"
 # Check if MQTT broker is running
@@ -61,5 +62,5 @@ fi
 
 echo "IoT Data Bridge stopped. Cleaning up..."
 # Stop MQTT broker
-pkill mosquitto 2>/dev/null || true
+sudo pkill mosquitto 2>/dev/null || true
 echo "All services stopped!"
