@@ -28,6 +28,11 @@ class MQTTInputHandler:
     async def start(self):
         """Start MQTT client"""
         try:
+            self.logger.info("🔌 CONNECTING TO MQTT BROKER",
+                           host=self.config.host,
+                           port=self.config.port,
+                           topic=self.config.topic)
+            
             self.client = MQTTClient(
                 hostname=self.config.host,
                 port=self.config.port,
@@ -38,10 +43,14 @@ class MQTTInputHandler:
             
             async with self.client:
                 self.is_running = True
-                self.logger.info("MQTT client started", 
+                self.logger.info("✅ MQTT CLIENT CONNECTED", 
                                host=self.config.host, 
                                port=self.config.port,
                                topic=self.config.topic)
+                
+                # Subscribe to topic
+                await self.client.subscribe(self.config.topic, qos=self.config.qos)
+                self.logger.info("📡 SUBSCRIBED TO TOPIC", topic=self.config.topic)
                 
                 async for message in self.client.messages:
                     if not self.is_running:
