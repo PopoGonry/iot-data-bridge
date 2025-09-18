@@ -185,7 +185,6 @@ async def main():
     # Setup logging
     import logging
     from logging.handlers import RotatingFileHandler
-    from pathlib import Path
     
     # Create logs directory
     logs_dir = Path("logs")
