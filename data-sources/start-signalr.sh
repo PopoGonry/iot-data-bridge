@@ -73,7 +73,24 @@ echo
 echo "Starting Data Publisher (SignalR)..."
 echo
 
-python3 signalr_publisher.py "$@"
+echo "Usage Examples:"
+echo "   Default:  python3 signalr_publisher.py"
+echo "   Custom:   python3 signalr_publisher.py 192.168.1.100 5000"
+echo
+
+# Get SignalR hub host and port from user
+read -p "Enter SignalR hub host (default: localhost): " SIGNALR_HOST
+SIGNALR_HOST=${SIGNALR_HOST:-localhost}
+
+read -p "Enter SignalR hub port (default: 5000): " SIGNALR_PORT
+SIGNALR_PORT=${SIGNALR_PORT:-5000}
+
+echo
+echo "Starting Data Publisher with SignalR: $SIGNALR_HOST:$SIGNALR_PORT"
+echo
+
+# Start the publisher (group name will be iot_clients by default)
+python3 signalr_publisher.py $SIGNALR_HOST $SIGNALR_PORT
 
 echo
 echo "Data Publisher stopped."

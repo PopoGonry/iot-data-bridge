@@ -37,7 +37,22 @@ echo.
 echo Starting Data Publisher (SignalR)...
 echo.
 
-python signalr_publisher.py %1 %2
+echo Usage Examples:
+echo    Default:  python signalr_publisher.py
+echo    Custom:   python signalr_publisher.py 192.168.1.100 5000
+echo.
+
+set /p SIGNALR_HOST="Enter SignalR hub host (default: localhost): "
+if "%SIGNALR_HOST%"=="" set SIGNALR_HOST=localhost
+
+set /p SIGNALR_PORT="Enter SignalR hub port (default: 5000): "
+if "%SIGNALR_PORT%"=="" set SIGNALR_PORT=5000
+
+echo.
+echo Starting Data Publisher with SignalR: %SIGNALR_HOST%:%SIGNALR_PORT%
+echo.
+
+python signalr_publisher.py %SIGNALR_HOST% %SIGNALR_PORT%
 
 echo.
 echo Data Publisher stopped.

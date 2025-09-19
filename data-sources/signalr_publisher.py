@@ -229,14 +229,25 @@ async def publish_test_data(hub_url, group_name):
 async def main():
     """Main function with command line arguments"""
     if len(sys.argv) < 2:
-        print("Error: SignalR hub URL is required!")
-        print("Usage: python signalr_publisher.py <hub_url> [group_name]")
-        print("Example: python signalr_publisher.py http://localhost:5000/hub iot_clients")
-        print("Example: python signalr_publisher.py http://192.168.1.100:5000/hub iot_clients")
+        print("Error: SignalR hub host is required!")
+        print("Usage: python signalr_publisher.py <signalr_host> [signalr_port]")
+        print("Example: python signalr_publisher.py localhost 5000")
+        print("Example: python signalr_publisher.py 192.168.1.100 5000")
         sys.exit(1)
     
-    hub_url = sys.argv[1]
-    group_name = sys.argv[2] if len(sys.argv) > 2 else "iot_clients"
+    signalr_host = sys.argv[1]
+    signalr_port = sys.argv[2] if len(sys.argv) > 2 else "5000"
+    
+    # Build SignalR URL
+    hub_url = f"http://{signalr_host}:{signalr_port}/hub"
+    
+    # Group name is always iot_clients for data sources
+    group_name = "iot_clients"
+    
+    print(f"SignalR Host: {signalr_host}")
+    print(f"SignalR Port: {signalr_port}")
+    print(f"SignalR URL: {hub_url}")
+    print(f"Group: {group_name}")
     
     await publish_test_data(hub_url, group_name)
 
