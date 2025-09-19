@@ -9,13 +9,14 @@ from typing import Optional, Callable, Any
 import structlog
 
 try:
-    from signalrcore import HubConnectionBuilder, HubConnection
+    from signalrcore.hub_connection_builder import HubConnectionBuilder
+    from signalrcore.hub.base_hub_connection import BaseHubConnection
     SIGNALR_AVAILABLE = True
 except ImportError as e:
     print(f"SignalR import error: {e}")
     SIGNALR_AVAILABLE = False
     HubConnectionBuilder = None
-    HubConnection = None
+    BaseHubConnection = None
 
 from layers.base import InputLayerInterface
 from models.events import IngressEvent
@@ -29,7 +30,7 @@ class SignalRInputHandler:
         self.config = config
         self.callback = callback
         self.logger = structlog.get_logger("signalr_input")
-        self.connection = None
+        self.connection: Optional[BaseHubConnection] = None
         self.is_running = False
     
     async def start(self):

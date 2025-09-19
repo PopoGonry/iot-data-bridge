@@ -5,17 +5,19 @@ Transports Layer - SignalR Sends resolved events to target devices
 import asyncio
 import json
 import uuid
+from datetime import datetime
 from typing import Optional, Callable, List, Any
 import structlog
 
 try:
-    from signalrcore import HubConnectionBuilder, HubConnection
+    from signalrcore.hub_connection_builder import HubConnectionBuilder
+    from signalrcore.hub.base_hub_connection import BaseHubConnection
     SIGNALR_AVAILABLE = True
 except ImportError as e:
     print(f"SignalR import error: {e}")
     SIGNALR_AVAILABLE = False
     HubConnectionBuilder = None
-    HubConnection = None
+    BaseHubConnection = None
 
 from layers.base import TransportsLayerInterface
 from models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog, LayerResult
@@ -29,7 +31,7 @@ class SignalRTransport:
     def __init__(self, config):
         self.config = config
         self.logger = structlog.get_logger("signalr_transport")
-        self.connection = None
+        self.connection: Optional[BaseHubConnection] = None
     
     async def send_to_device(self, device_target: DeviceTarget) -> bool:
         """Send data to device via SignalR"""

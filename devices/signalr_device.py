@@ -9,7 +9,14 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
 import structlog
-from signalrcore import HubConnectionBuilder, HubConnection
+try:
+    from signalrcore.hub_connection_builder import HubConnectionBuilder
+    from signalrcore.hub.base_hub_connection import BaseHubConnection
+    SIGNALR_AVAILABLE = True
+except ImportError:
+    SIGNALR_AVAILABLE = False
+    HubConnectionBuilder = None
+    BaseHubConnection = None
 
 
 class IoTDevice:
@@ -18,13 +25,17 @@ class IoTDevice:
     def __init__(self, device_id: str, config: Dict[str, Any]):
         self.device_id = device_id
         self.config = config
-        self.connection = None
+        self.connection: Optional[BaseHubConnection] = None
         self.is_running = False
         self.data_count = 0
         self.logger = structlog.get_logger(f"device_{device_id}")
     
     async def start(self):
         """Start the device"""
+        if not SIGNALR_AVAILABLE:
+            self.logger.error("SignalR is not available. Please install signalrcore library.")
+            raise ImportError("SignalR library not available")
+        
         # Get SignalR settings
         signalr_config = self.config.get('signalr', {})
         url = signalr_config.get('url', 'http://localhost:5000/hub')

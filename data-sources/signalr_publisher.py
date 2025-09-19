@@ -10,7 +10,14 @@ import random
 import signal
 import sys
 from datetime import datetime
-from signalrcore import HubConnectionBuilder, HubConnection
+try:
+    from signalrcore.hub_connection_builder import HubConnectionBuilder
+    from signalrcore.hub.base_hub_connection import BaseHubConnection
+    SIGNALR_AVAILABLE = True
+except ImportError:
+    SIGNALR_AVAILABLE = False
+    HubConnectionBuilder = None
+    BaseHubConnection = None
 
 
 def generate_random_test_data():
@@ -155,6 +162,10 @@ def signal_handler(signum, frame):
 
 async def publish_test_data(hub_url, group_name):
     """Publish random test data to SignalR hub periodically"""
+    
+    if not SIGNALR_AVAILABLE:
+        print("Error: SignalR library not available. Please install 'signalrcore'.")
+        sys.exit(1)
     
     interval = 5  # 5초마다 데이터 전송
     
