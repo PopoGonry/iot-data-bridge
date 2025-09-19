@@ -32,11 +32,7 @@ class IoTDevice:
         topic = mqtt_config.get('topic', f'devices/{self.device_id.lower()}/ingress')
         qos = mqtt_config.get('qos', 1)
         
-        self.logger.info("Starting device", 
-                       device_id=self.device_id,
-                       host=host,
-                       port=port,
-                       topic=topic)
+        # Remove verbose logging
         
         # Create MQTT client
         self.client = Client(
@@ -56,7 +52,6 @@ class IoTDevice:
                 self.logger.debug("MQTT topic subscription completed", topic=topic)
                 
                 self.is_running = True
-                self.logger.info("Device waiting for messages")
                 
                 # Listen for messages
                 async for message in self.client.messages:
@@ -82,7 +77,6 @@ class IoTDevice:
     
     async def stop(self):
         """Stop the device"""
-        self.logger.info("Stopping device", device_id=self.device_id)
         self.is_running = False
         # aiomqtt client will be closed when exiting the async with context
     
@@ -103,12 +97,20 @@ class IoTDevice:
             # Increment counter
             self.data_count += 1
             
-            # Log received data
-            self.logger.info("Data received",
-                           device_id=self.device_id,
-                           object=object_name,
-                           value=value,
-                           count=self.data_count)
+            # Log received data in the requested format
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_message = f"{timestamp} | INFO | Data received | device_id={self.device_id} | object={object_name} | value={value}"
+            
+            # Print to console
+            print(log_message)
+            
+            # Write to log file
+            log_file = Path("logs") / f"device_{self.device_id}.log"
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(log_message + '\n')
+                f.flush()
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in message", error=str(e))

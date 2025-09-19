@@ -80,15 +80,11 @@ class TransportsLayer(TransportsLayerInterface):
     async def start(self):
         """Start transports layer"""
         try:
-            self.logger.info("Starting MQTT transports layer")
-            
             if not self.config.mqtt:
                 raise ValueError("MQTT configuration is required")
             
             self.transport = MQTTTransport(self.config.mqtt)
             self.is_running = True
-            
-            self.logger.info("MQTT transports layer started successfully")
             
         except Exception as e:
             self.logger.error("Failed to start MQTT transports layer", error=str(e))
@@ -96,9 +92,7 @@ class TransportsLayer(TransportsLayerInterface):
     
     async def stop(self):
         """Stop transports layer"""
-        self.logger.info("Stopping MQTT transports layer")
         self.is_running = False
-        self.logger.info("MQTT transports layer stopped")
     
     async def send_to_devices(self, event: ResolvedEvent):
         """Send resolved event to target devices"""

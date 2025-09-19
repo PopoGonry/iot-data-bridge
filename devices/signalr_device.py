@@ -99,7 +99,6 @@ class IoTDevice:
                 
                 # Disconnect
                 self.connection.stop()
-                self.logger.info("Disconnected from SignalR hub", device_id=self.device_id)
             except Exception as e:
                 self.logger.error("Error stopping device", 
                                 device_id=self.device_id, 
