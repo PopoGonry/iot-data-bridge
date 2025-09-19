@@ -42,11 +42,7 @@ class IoTDevice:
         group = signalr_config.get('group', self.device_id)
         target = signalr_config.get('target', 'ingress')
         
-        self.logger.info("Starting device", 
-                       device_id=self.device_id,
-                       url=url,
-                       group=group,
-                       target=target)
+        # Remove verbose logging
         
         # Create SignalR connection
         self.connection = HubConnectionBuilder() \
@@ -64,7 +60,6 @@ class IoTDevice:
         try:
             # Connect to SignalR hub
             self.connection.start()
-            self.logger.info("Connected to SignalR hub", device_id=self.device_id)
             
             # Wait a moment for connection to stabilize
             await asyncio.sleep(1)
@@ -72,14 +67,12 @@ class IoTDevice:
             # Check if connection is still active
             if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
                 if self.connection.transport._ws and self.connection.transport._ws.sock:
-                    self.logger.info("Connection is active", device_id=self.device_id)
+                    pass  # Connection is active
                 else:
-                    self.logger.error("Connection is not active", device_id=self.device_id)
                     raise ConnectionError("SignalR connection is not active")
             
             # Join device group
             self.connection.send("JoinGroup", [group])
-            self.logger.info("Joined group", device_id=self.device_id, group=group)
             
             self.is_running = True
             
@@ -122,7 +115,6 @@ class IoTDevice:
             
             # First argument should be the message content
             message = args[0]
-            self.logger.info("Processing message", message=message, message_type=type(message).__name__)
             
             # Parse message
             if isinstance(message, str):
@@ -143,12 +135,10 @@ class IoTDevice:
             
             self.data_count += 1
             
-            # Log received data
-            self.logger.info("Data received", 
-                           device_id=self.device_id,
-                           object=object_name,
-                           value=value,
-                           count=self.data_count)
+            # Log received data in the requested format
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{timestamp} | INFO | Data received | device_id={self.device_id} | object={object_name} | value={value}")
             
             # Store data point (simple in-memory storage)
             self._store_data_point(object_name, value, timestamp)

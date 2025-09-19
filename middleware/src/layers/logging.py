@@ -84,11 +84,10 @@ class LoggingLayer(LoggingLayerInterface):
                 f.write(log_message + '\n')
                 f.flush()
             
-            # Also log to console
-            self.logger.info("Data sent", 
-                           device_id=event.device_id,
-                           object=event.object,
-                           value=event.value)
+            # Also log to console in the requested format
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{timestamp} | INFO | Data sent | device_id={event.device_id} | object={event.object} | value={event.value}")
             
         except Exception as e:
             self._increment_error()
