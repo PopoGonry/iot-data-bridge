@@ -66,6 +66,7 @@ class LoggingLayer(LoggingLayerInterface):
             pass
         except Exception as e:
             self._increment_error()
+            # Don't log the error to avoid console spam
     
     async def log_device_ingest(self, event: DeviceIngestLog):
         """Log device ingest event"""

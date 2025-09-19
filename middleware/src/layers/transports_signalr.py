@@ -40,7 +40,17 @@ class SignalRTransport:
                 self.connection = HubConnectionBuilder() \
                     .with_url(self.config.url) \
                     .build()
+                
+                # Add event handlers to prevent undefined errors
+                self.connection.on_open(lambda: self.logger.debug("SignalR transport connection opened"))
+                self.connection.on_close(lambda: self.logger.debug("SignalR transport connection closed"))
+                self.connection.on_error(lambda data: self.logger.error("SignalR transport connection error", error=data))
+                
                 self.connection.start()
+                
+                # Wait for connection to stabilize
+                import time
+                time.sleep(1)
             
             # Get device-specific configuration
             device_config = device_target.transport_config.config
