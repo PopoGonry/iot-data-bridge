@@ -53,12 +53,6 @@ public class IoTHub : Hub
         Console.WriteLine($"Sent to group {groupName}, target {target}: {data}");
     }
 
-    public async Task SendMessage(string message)
-    {
-        await Clients.All.SendAsync("ReceiveMessage", message);
-        Console.WriteLine($"Broadcast message: {message}");
-    }
-
     public override async Task OnConnectedAsync()
     {
         Console.WriteLine($"Client connected: {Context.ConnectionId} from {Context.GetHttpContext()?.Connection.RemoteIpAddress}");
