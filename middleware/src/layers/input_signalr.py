@@ -50,6 +50,11 @@ class SignalRInputHandler:
             # Register message handler for ingress messages
             self.connection.on("ingress", self._on_message)
             
+            # Wait a moment for SignalR hub to be fully ready
+            import time
+            self.logger.info("Waiting for SignalR hub to be ready...")
+            time.sleep(3)
+            
             self.logger.info("Starting SignalR connection")
             # Start connection
             self.connection.start()
