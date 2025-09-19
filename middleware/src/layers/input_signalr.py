@@ -106,7 +106,7 @@ class SignalRInputHandler:
                 self.logger.error("Error stopping SignalR connection", error=str(e))
         self.logger.info("SignalR connection stopped")
     
-    async def _on_message(self, *args):
+    def _on_message(self, *args):
         """Handle incoming SignalR message"""
         self.logger.info("Received SignalR message", args_count=len(args), args=args)
         try:
@@ -136,7 +136,9 @@ class SignalRInputHandler:
                 }
             )
             
-            await self.callback(ingress_event)
+            # Schedule the callback as a task
+            import asyncio
+            asyncio.create_task(self.callback(ingress_event))
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in SignalR message", error=str(e))
