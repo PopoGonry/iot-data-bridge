@@ -206,6 +206,9 @@ class IoTDataBridge:
             self.config.logging
         )
         
+        # Set up layer callbacks
+        self.resolver_layer.set_transports_callback(self._handle_resolved_event)
+        
         self.logger.info("Layers initialized successfully")
     
     def _start_signalr_hub(self):
