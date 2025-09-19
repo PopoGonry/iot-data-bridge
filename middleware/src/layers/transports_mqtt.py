@@ -4,13 +4,14 @@ Transports Layer - MQTT Sends resolved events to target devices
 
 import asyncio
 import json
-from typing import Optional, Callable, List
+import uuid
+from typing import Optional, Callable, List, Any
 import structlog
 
 from aiomqtt import Client as MQTTClient
 
 from layers.base import TransportsLayerInterface
-from models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog
+from models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog, LayerResult
 from models.config import TransportsConfig
 from catalogs.device_catalog import DeviceCatalog
 
@@ -72,7 +73,9 @@ class TransportsLayer(TransportsLayerInterface):
     """Transports Layer - MQTT only"""
     
     def __init__(self, config: TransportsConfig, device_catalog: DeviceCatalog):
-        super().__init__(config, device_catalog)
+        super().__init__("mqtt_transports")
+        self.config = config
+        self.device_catalog = device_catalog
         self.transport_handler = None
         
         # Initialize transport handler based on transport type
@@ -82,6 +85,44 @@ class TransportsLayer(TransportsLayerInterface):
             self.transport_handler = MQTTTransport(self.config.mqtt)
         else:
             raise ValueError(f"Unsupported transport type: {self.config.type}")
+    
+    async def start(self) -> None:
+        """Start transports layer"""
+        self.is_running = True
+        self.logger.info("Transports layer started")
+    
+    async def stop(self) -> None:
+        """Stop transports layer"""
+        self.is_running = False
+        self.logger.info("Transports layer stopped")
+    
+    async def send_to_devices(self, event: Any) -> LayerResult:
+        """Send event to target devices"""
+        try:
+            if not isinstance(event, ResolvedEvent):
+                raise ValueError(f"Expected ResolvedEvent, got {type(event)}")
+            
+            transport_events = await self.send_event(event)
+            
+            successful_count = sum(1 for e in transport_events if e.success)
+            total_count = len(transport_events)
+            
+            return LayerResult(
+                success=successful_count > 0,
+                processed_count=total_count,
+                error_count=total_count - successful_count,
+                data=transport_events
+            )
+            
+        except Exception as e:
+            self.logger.error("Error in send_to_devices", error=str(e))
+            self._increment_error()
+            return LayerResult(
+                success=False,
+                processed_count=0,
+                error_count=1,
+                data=None
+            )
     
     async def send_event(self, resolved_event: ResolvedEvent) -> List[TransportEvent]:
         """Send resolved event to target devices"""
