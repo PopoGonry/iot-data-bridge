@@ -84,8 +84,6 @@ class IoTDataBridge:
         # Custom formatter for console logs (same as file format)
         def console_formatter(logger, method_name, event_dict):
             """Console formatter matching file log format"""
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             message = event_dict.get('event', '')
             
             # Extract key fields
@@ -93,9 +91,9 @@ class IoTDataBridge:
             object_name = event_dict.get('object', '')
             value = event_dict.get('value', '')
             
-            # Show Data sent logs in console with proper format
+            # Show Data sent logs in console with proper format (no timestamp - structlog will add it)
             if message == "Data sent" and device_id and object_name and value != '':
-                return f"{timestamp} | INFO | Data sent | device_id={device_id} | object={object_name} | value={value}"
+                return f"Data sent | device_id={device_id} | object={object_name} | value={value}"
             else:
                 # Show other important logs normally
                 return message
