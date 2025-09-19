@@ -40,12 +40,14 @@ class ResolverLayer(ResolverLayerInterface):
         """Resolve mapped event to target devices"""
         try:
             self._increment_processed()
-            
+            self.logger.info("Resolving event", trace_id=event.trace_id, object=event.object, value=event.value)
             
             # Get target devices for the object
             target_devices = self.device_catalog.get_devices_for_object(event.object)
+            self.logger.info("Found target devices", target_devices=target_devices)
             
             if not target_devices:
+                self.logger.error("No target devices found for object", object=event.object)
                 self._increment_error()
                 return None
             
@@ -57,17 +59,17 @@ class ResolverLayer(ResolverLayerInterface):
                 target_devices=target_devices
             )
             
-            self.logger.debug("Successfully resolved event",
-                            trace_id=event.trace_id,
-                            object=event.object,
-                            target_devices=target_devices)
+            self.logger.info("Created resolved event", resolved_event=resolved_event)
             
             # Log middleware event
             await self._log_middleware_event(event, target_devices)
             
             # Forward to transports layer
             if self.transports_callback:
+                self.logger.info("Forwarding to transports layer")
                 await self.transports_callback(resolved_event)
+            else:
+                self.logger.error("No transports callback set")
             
             return resolved_event
             
@@ -76,11 +78,15 @@ class ResolverLayer(ResolverLayerInterface):
             self.logger.error("Error resolving event", 
                             error=str(e), 
                             trace_id=event.trace_id)
+            import traceback
+            self.logger.error("Traceback", traceback=traceback.format_exc())
             return None
     
     async def _log_middleware_event(self, event: MappedEvent, target_devices: list):
         """Log middleware event"""
         try:
+            self.logger.info("Creating middleware event log", trace_id=event.trace_id, object=event.object, target_devices=target_devices)
+            
             # Create middleware event log
             middleware_log = MiddlewareEventLog(
                 trace_id=event.trace_id,
@@ -89,10 +95,16 @@ class ResolverLayer(ResolverLayerInterface):
                 send_devices=target_devices
             )
             
+            self.logger.info("Created middleware event log", middleware_log=middleware_log)
+            
             # Send to logging layer
             await self.logging_callback(middleware_log)
+            
+            self.logger.info("Successfully logged middleware event")
             
         except Exception as e:
             self.logger.error("Error logging middleware event", 
                             error=str(e), 
                             trace_id=event.trace_id)
+            import traceback
+            self.logger.error("Traceback", traceback=traceback.format_exc())
