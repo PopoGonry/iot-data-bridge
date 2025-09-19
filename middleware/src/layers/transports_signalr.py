@@ -11,7 +11,8 @@ import structlog
 try:
     from signalrcore import HubConnectionBuilder, HubConnection
     SIGNALR_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    print(f"SignalR import error: {e}")
     SIGNALR_AVAILABLE = False
     HubConnectionBuilder = None
     HubConnection = None
