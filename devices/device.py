@@ -6,7 +6,6 @@ IoT Device - Simulates a device receiving data from middleware
 import asyncio
 import json
 import sys
-import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
 import structlog
@@ -130,41 +129,25 @@ async def main():
     print(f"Starting IoT Device: {device_id}")
     print(f"MQTT Host: {mqtt_host}:{mqtt_port}")
     
-    # Load configuration from template or create default
-    config_file = Path("device_config.yaml")
-    if config_file.exists():
-        with open(config_file, 'r', encoding='utf-8') as f:
-            config_data = yaml.safe_load(f)
-        print(f"Loaded configuration from: {config_file}")
-    else:
-        # Create default configuration
-        config_data = {
-            'device_id': device_id,
-            'mqtt': {
-                'host': mqtt_host,
-                'port': mqtt_port,
-                'topic': f'devices/{device_id.lower()}/ingress',
-                'qos': 1,
-                'keepalive': 60,
-                'username': None,
-                'password': None
-            },
-            'logging': {
-                'level': 'INFO',
-                'file': 'device.log',
-                'max_size': 10485760,
-                'backup_count': 5
-            }
+    # Create configuration from command line arguments
+    config = {
+        'device_id': device_id,
+        'mqtt': {
+            'host': mqtt_host,
+            'port': mqtt_port,
+            'topic': f'devices/{device_id.lower()}/ingress',
+            'qos': 1,
+            'keepalive': 60,
+            'username': None,
+            'password': None
+        },
+        'logging': {
+            'level': 'INFO',
+            'file': 'device.log',
+            'max_size': 10485760,
+            'backup_count': 5
         }
-        print("Using default configuration")
-    
-    # Override device_id and MQTT settings from command line
-    config_data['device_id'] = device_id
-    config_data['mqtt']['host'] = mqtt_host
-    config_data['mqtt']['port'] = mqtt_port
-    config_data['mqtt']['topic'] = f'devices/{device_id.lower()}/ingress'
-    
-    config = config_data
+    }
     
     print(f"Device {device_id} configuration:")
     print(f"  - MQTT Host: {config['mqtt']['host']}:{config['mqtt']['port']}")

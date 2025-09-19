@@ -188,14 +188,17 @@ class IoTDataBridge:
     
     async def _handle_ingress_event(self, event: IngressEvent):
         """Handle ingress event from input layer"""
+        self.logger.info("Data received from input", trace_id=event.trace_id, source=event.meta.get('source', 'unknown'))
         await self.mapping_layer.map_event(event)
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
+        self.logger.info("Data mapped successfully", trace_id=event.trace_id, object=event.object, value=event.value, value_type=event.value_type.value)
         await self.resolver_layer.resolve_event(event)
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
+        self.logger.info("Routing to devices", trace_id=event.trace_id, object=event.object, target_devices=event.target_devices)
         await self.transports_layer.send_to_devices(event)
     
     async def _log_middleware_event(self, event: MiddlewareEventLog):
