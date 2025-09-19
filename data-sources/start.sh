@@ -8,26 +8,26 @@ echo
 
 # Check if Python is available
 if ! command -v python3 &> /dev/null; then
-    echo "❌ Error: Python3 is not installed or not in PATH"
-    echo "💡 Please install Python 3.11+ and try again"
+    echo "Error: Python3 is not installed or not in PATH"
+    echo "Please install Python 3.11+ and try again"
     exit 1
 fi
 
 # Check if requirements are installed
-echo "📦 Checking dependencies..."
+echo "Checking dependencies..."
 if ! python3 -c "import aiomqtt" &> /dev/null; then
-    echo "📥 Installing dependencies..."
+    echo "Installing dependencies..."
     pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
-        echo "❌ Error: Failed to install dependencies"
+        echo "Error: Failed to install dependencies"
         exit 1
     fi
 fi
 
 echo
-echo "🚀 Starting Data Publisher..."
+echo "Starting Data Publisher..."
 echo
-echo "📖 Usage Examples:"
+echo "Usage Examples:"
 echo "   Local:    python3 mqtt_publisher.py localhost 1883"
 echo "   Remote:   python3 mqtt_publisher.py 192.168.1.100 1883"
 echo
@@ -40,11 +40,11 @@ read -p "Enter MQTT broker port (default: 1883): " BROKER_PORT
 BROKER_PORT=${BROKER_PORT:-1883}
 
 echo
-echo "🚀 Starting with broker: $BROKER_HOST:$BROKER_PORT"
+echo "Starting with broker: $BROKER_HOST:$BROKER_PORT"
 echo
 
 # Start the publisher
 python3 mqtt_publisher.py $BROKER_HOST $BROKER_PORT
 
 echo
-echo "👋 Data Publisher stopped."
+echo "Data Publisher stopped."

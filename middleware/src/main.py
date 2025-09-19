@@ -12,15 +12,15 @@ from pathlib import Path
 import structlog
 import yaml
 
-from src.layers.input import InputLayer
-from src.layers.mapping import MappingLayer
-from src.layers.resolver import ResolverLayer
-from src.layers.transports import TransportsLayer
-from src.layers.logging import LoggingLayer
-from src.catalogs.mapping_catalog import MappingCatalog
-from src.catalogs.device_catalog import DeviceCatalog
-from src.models.config import AppConfig
-from src.models.events import IngressEvent, MappedEvent, ResolvedEvent, MiddlewareEventLog, DeviceIngestLog
+from layers.input import InputLayer
+from layers.mapping import MappingLayer
+from layers.resolver import ResolverLayer
+from layers.transports import TransportsLayer
+from layers.logging import LoggingLayer
+from catalogs.mapping_catalog import MappingCatalog
+from catalogs.device_catalog import DeviceCatalog
+from models.config import AppConfig
+from models.events import IngressEvent, MappedEvent, ResolvedEvent, MiddlewareEventLog, DeviceIngestLog
 
 
 class IoTDataBridge:
@@ -73,7 +73,7 @@ class IoTDataBridge:
                 raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
         else:
             # Use default config file
-            config_file = Path("middleware/config/app.yaml")
+            config_file = Path("config/app.yaml")
             if not config_file.exists():
                 raise FileNotFoundError(f"Configuration file not found: {config_file}")
         

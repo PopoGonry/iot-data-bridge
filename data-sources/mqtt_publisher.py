@@ -149,7 +149,7 @@ running = True
 def signal_handler(signum, frame):
     """Signal handler for graceful shutdown"""
     global running
-    print("\n🛑 Shutting down data publisher...")
+    print("\nShutting down data publisher...")
     running = False
 
 
@@ -159,16 +159,16 @@ async def publish_test_data(broker_host, broker_port):
     topic = "iot/ingress"
     interval = 5  # 5초마다 데이터 전송
     
-    print(f"🚀 Starting IoT Data Publisher")
-    print(f"📡 Connecting to MQTT broker at {broker_host}:{broker_port}")
-    print(f"📤 Publishing to topic: {topic}")
-    print(f"⏰ Interval: {interval} seconds")
-    print(f"🔄 Press Ctrl+C to stop")
+    print(f"Starting IoT Data Publisher")
+    print(f"Connecting to MQTT broker at {broker_host}:{broker_port}")
+    print(f"Publishing to topic: {topic}")
+    print(f"Interval: {interval} seconds")
+    print(f"Press Ctrl+C to stop")
     print()
     
     try:
         async with Client(hostname=broker_host, port=broker_port) as client:
-            print("✅ Connected to MQTT broker successfully!")
+            print("Connected to MQTT broker successfully!")
             print()
             
             cycle_count = 0
@@ -176,7 +176,7 @@ async def publish_test_data(broker_host, broker_port):
                 cycle_count += 1
                 test_cases = generate_random_test_data()
                 
-                print(f"📊 Cycle #{cycle_count} - Publishing {len(test_cases)} data points...")
+                print(f"Cycle #{cycle_count} - Publishing {len(test_cases)} data points...")
                 
                 for i, test_case in enumerate(test_cases, 1):
                     if not running:
@@ -192,27 +192,27 @@ async def publish_test_data(broker_host, broker_port):
                     )
                 
                 if running:
-                    print(f"✅ Cycle #{cycle_count} completed successfully!")
-                    print(f"⏳ Waiting {interval} seconds for next cycle...")
+                    print(f"Cycle #{cycle_count} completed successfully!")
+                    print(f"Waiting {interval} seconds for next cycle...")
                     print("-" * 50)
                     
                     # Wait for next cycle
                     await asyncio.sleep(interval)
             
-            print("🏁 Data publisher stopped.")
+            print("Data publisher stopped.")
             
     except Exception as e:
-        print(f"❌ Error: {e}")
-        print(f"💡 Make sure MQTT broker is running on {broker_host}:{broker_port}")
+        print(f"Error: {e}")
+        print(f"Make sure MQTT broker is running on {broker_host}:{broker_port}")
 
 
 async def main():
     """Main function with command line arguments"""
     if len(sys.argv) < 2:
-        print("❌ Error: MQTT broker host is required!")
-        print("📖 Usage: python mqtt_publisher.py <broker_host> [broker_port]")
-        print("📖 Example: python mqtt_publisher.py localhost 1883")
-        print("📖 Example: python mqtt_publisher.py 192.168.1.100 1883")
+        print("Error: MQTT broker host is required!")
+        print("Usage: python mqtt_publisher.py <broker_host> [broker_port]")
+        print("Example: python mqtt_publisher.py localhost 1883")
+        print("Example: python mqtt_publisher.py 192.168.1.100 1883")
         sys.exit(1)
     
     broker_host = sys.argv[1]
@@ -229,9 +229,9 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n🛑 Interrupted by user")
+        print("\nInterrupted by user")
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"Unexpected error: {e}")
     finally:
-        print("👋 Goodbye!")
+        print("Goodbye!")
 
