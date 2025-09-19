@@ -45,8 +45,8 @@ class SignalRInputHandler:
                 .with_url(self.config.url) \
                 .build()
             
-            # Register message handler
-            self.connection.on("ReceiveMessage", self._on_message)
+        # Register message handler for ingress messages
+        self.connection.on("ingress", self._on_message)
             
             # Start connection
             self.connection.start()
