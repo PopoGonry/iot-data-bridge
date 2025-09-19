@@ -77,13 +77,13 @@ class MappingLayer(MappingLayerInterface):
     def _cast_value(self, value: any, value_type: str) -> any:
         """Cast value to specified type"""
         try:
-            if value_type == 'int':
+            if value_type == 'integer':
                 return int(value)
             elif value_type == 'float':
                 return float(value)
-            elif value_type == 'str':
+            elif value_type == 'text':
                 return str(value)
-            elif value_type == 'bool':
+            elif value_type == 'boolean':
                 if isinstance(value, str):
                     return value.lower() in ('true', '1', 'yes', 'on')
                 return bool(value)

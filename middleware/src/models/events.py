@@ -16,10 +16,10 @@ class TransportType(str, Enum):
 
 class ValueType(str, Enum):
     """Value type enumeration"""
-    INT = "int"
+    INTEGER = "integer"
     FLOAT = "float"
-    STR = "str"
-    BOOL = "bool"
+    TEXT = "text"
+    BOOLEAN = "boolean"
 
 
 # ============================================================================
