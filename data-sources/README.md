@@ -1,6 +1,7 @@
 # Data Sources - 외부 데이터 소스
 
-외부에서 IoT Data Bridge로 데이터를 전송하는 부분입니다.
+외부에서 IoT Data Bridge로 해양 장비 데이터를 전송하는 부분입니다.
+NMEA 및 해양 장비 사양에 기반한 완전한 해양 장비 데이터를 생성하고 전송합니다.
 
 ## 📁 파일 구조
 
@@ -89,9 +90,9 @@ python data_generator.py
   "header": {
     "UUID": "550e8400-e29b-41d4-a716-446655440000",
     "TIME": "20250918103045",
-    "SRC": "SENSOR-GW-01",
+    "SRC": "GPS-GW-01",
     "DEST": "IoTDataBridge",
-    "TYPE": "SENSORDATA"
+    "TYPE": "GPSDATA"
   },
   "payload": {
     "Equip.Tag": "GPS001",
@@ -101,11 +102,41 @@ python data_generator.py
 }
 ```
 
-## 🎯 테스트 시나리오
+## 🎯 해양 장비 데이터 시나리오
 
-1. **GPS 데이터**: 위도/경도/고도
-2. **엔진 데이터**: RPM/온도
-3. **환경 데이터**: 습도/온도
+### **GPS Navigation Data**
+- GPS 위도/경도 (GLL001, GLL002)
+- GPS 코스 오버 그라운드 (VTG001)
+- GPS 스피드 오버 그라운드 (VTG002)
+
+### **Speed Log Data**
+- 물을 통한 속도 (VHW003)
+
+### **Wind Data**
+- 풍향/풍속/참조점/단위 (MWV101-104)
+
+### **Echo Sounder Data**
+- 수심/수온 (DPT101, MTW001)
+
+### **Engine Data**
+- Engine 1/2: 데이터 소스, 샤프트 번호, 속도, 프로펠러 피치, 상태
+- Diesel Engine 1: 9개 실린더 배기 가스 온도/최대 압력, 시스템 데이터
+- Gas Engine 1: 배기 가스 온도, 윤활유 압력, RPM
+
+### **Rudder Data**
+- 좌우 러더 각도/상태 (RSA001-004)
+
+### **VDR Data**
+- 해류 설정/드리프트 (VDR001-002)
+
+### **Inclinometer Data**
+- 롤/피치 각도 (XDR001-002)
+
+### **Gyrocompass Data**
+- 자기 방향/진북 방향 (HDG001, THS001)
+
+### **Diesel Generator Data**
+- Generator 1/2 운전 시간
 
 ## 📝 로그
 
@@ -123,7 +154,9 @@ Cycle 2: Publishing random data...
 ```
 
 ### **특징**
-- ✅ **주기적 전송**: 5초마다 랜덤 데이터 전송
-- ✅ **모든 객체 포함**: GPS, Engine, Environment 데이터 모두 생성
+- ✅ **주기적 전송**: 5초마다 랜덤 해양 장비 데이터 전송
+- ✅ **완전한 해양 장비 데이터**: GPS, Wind, Engine, Rudder, VDR, Inclinometer, Gyrocompass, Diesel Engine, Gas Engine, Generator 등 66개 데이터 포인트
+- ✅ **NMEA 표준 준수**: 해양 장비 표준에 따른 데이터 형식
+- ✅ **VM 매핑 지원**: devices.yaml과 mappings.yaml에 정의된 매핑 규칙 완전 지원
 - ✅ **Graceful Shutdown**: Ctrl+C로 안전한 종료
 - ✅ **명령행 인수 필수**: broker_host, broker_port 반드시 지정
