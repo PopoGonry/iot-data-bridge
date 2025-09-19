@@ -117,6 +117,7 @@ class SignalRInputHandler:
             
             # First argument should be the message content
             message = args[0]
+            self.logger.info("Processing message", message=message, message_type=type(message).__name__)
             
             # Parse message
             if isinstance(message, str):
@@ -141,9 +142,10 @@ class SignalRInputHandler:
             asyncio.create_task(self.callback(ingress_event))
             
         except json.JSONDecodeError as e:
-            self.logger.error("Invalid JSON in SignalR message", error=str(e))
+            self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
         except Exception as e:
-            self.logger.error("Error processing SignalR message", error=str(e))
+            import traceback
+            self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
 
 
 class InputLayer(InputLayerInterface):
