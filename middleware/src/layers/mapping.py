@@ -31,7 +31,6 @@ class MappingLayer(MappingLayerInterface):
         """Map ingress event to mapped event"""
         try:
             self._increment_processed()
-            self.logger.info("Mapping event", trace_id=event.trace_id, raw=event.raw)
             
             # Extract payload data
             payload = event.raw.get('payload', {})
@@ -39,26 +38,19 @@ class MappingLayer(MappingLayerInterface):
             message_id = payload.get('Message.ID')
             value = payload.get('VALUE')
             
-            self.logger.info("Extracted fields", equip_tag=equip_tag, message_id=message_id, value=value)
-            
             # Validate required fields
             if not all([equip_tag, message_id, value is not None]):
-                self.logger.error("Missing required fields", equip_tag=equip_tag, message_id=message_id, value=value)
                 self._increment_error()
                 return None
             
             # Get mapping rule
             rule = self.mapping_catalog.get_mapping(equip_tag, message_id)
             if not rule:
-                self.logger.error("No mapping rule found", equip_tag=equip_tag, message_id=message_id)
                 self._increment_error()
                 return None
             
-            self.logger.info("Found mapping rule", rule=rule)
-            
             casted_value = self._cast_value(value, rule.value_type)
             if casted_value is None:
-                self.logger.error("Failed to cast value", value=value, value_type=rule.value_type)
                 self._increment_error()
                 return None
             
@@ -69,8 +61,6 @@ class MappingLayer(MappingLayerInterface):
                 value=casted_value,
                 value_type=ValueType(rule.value_type)
             )
-            
-            self.logger.info("Created mapped event", mapped_event=mapped_event)
             
             # Forward to resolver layer
             await self.resolver_callback(mapped_event)

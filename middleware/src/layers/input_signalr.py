@@ -40,30 +40,25 @@ class SignalRInputHandler:
             raise ImportError("SignalR library not available")
             
         try:
-            self.logger.info("Building SignalR connection", url=self.config.url)
             # Build connection
             self.connection = HubConnectionBuilder() \
                 .with_url(self.config.url) \
                 .build()
             
-            self.logger.info("Registering message handler for ingress messages")
             # Register message handler for ingress messages
             self.connection.on("ingress", self._on_message)
             
             # Register connection event handlers
-            self.connection.on_open(lambda: self.logger.info("SignalR connection opened"))
-            self.connection.on_close(lambda: self.logger.info("SignalR connection closed"))
-            self.connection.on_error(lambda data: self.logger.error("SignalR connection error", error=data))
+            self.connection.on_open(lambda: None)
+            self.connection.on_close(lambda: None)
+            self.connection.on_error(lambda data: None)
             
             # Wait a moment for SignalR hub to be fully ready
             import time
-            self.logger.info("Waiting for SignalR hub to be ready...")
             time.sleep(3)
             
-            self.logger.info("Starting SignalR connection")
             # Start connection
             self.connection.start()
-            self.logger.info("SignalR connection started successfully")
             
             # Wait for connection to stabilize
             time.sleep(2)
@@ -71,20 +66,14 @@ class SignalRInputHandler:
             # Check if connection is still active
             if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
                 if self.connection.transport._ws and self.connection.transport._ws.sock:
-                    self.logger.info("Connection is active and ready")
+                    pass  # Connection is active
                 else:
-                    self.logger.error("Connection is not active")
                     raise ConnectionError("SignalR connection is not active")
             
-            self.logger.info("Attempting to join group", group=self.config.group)
             # Join group
             self.connection.send("JoinGroup", [self.config.group])
-            self.logger.info("JoinGroup command sent", group=self.config.group)
             
             self.is_running = True
-            self.logger.info("SignalR connection started", 
-                           url=self.config.url,
-                           group=self.config.group)
             
         except Exception as e:
             import traceback
@@ -108,16 +97,13 @@ class SignalRInputHandler:
     
     def _on_message(self, *args):
         """Handle incoming SignalR message"""
-        self.logger.info("Received SignalR message", args_count=len(args), args=args)
         try:
             # SignalR messages come as a list of arguments
             if not args or len(args) < 1:
-                self.logger.warning("Received empty or invalid SignalR message", args=args)
                 return
             
             # First argument should be the message content
             message = args[0]
-            self.logger.info("Processing message", message=message, message_type=type(message).__name__)
             
             # Parse message
             if isinstance(message, str):

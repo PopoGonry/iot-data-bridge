@@ -30,33 +30,15 @@ class LoggingLayer(LoggingLayerInterface):
         log_file = Path(self.config.file)
         log_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Setup rotating file handler
-        file_handler = RotatingFileHandler(
-            self.config.file,
-            encoding='utf-8',
-            maxBytes=self.config.max_size,
-            backupCount=self.config.backup_count
-        )
-        file_handler.setLevel(getattr(logging, self.config.level.upper()))
-        
-        # Setup formatter
-        formatter = logging.Formatter('%(message)s')
-        file_handler.setFormatter(formatter)
-        
-        # Add handler to logger
-        self.logger.addHandler(file_handler)
+        # No need to setup structlog handler - we write directly to file in log_device_ingest
     
     async def start(self):
         """Start logging layer"""
-        self.logger.info("Starting logging layer")
         self.is_running = True
-        self.logger.info("Logging layer started")
     
     async def stop(self):
         """Stop logging layer"""
-        self.logger.info("Stopping logging layer")
         self.is_running = False
-        self.logger.info("Logging layer stopped")
     
     async def log_middleware_event(self, event: MiddlewareEventLog):
         """Log middleware event - disabled to avoid duplicate logs"""
