@@ -81,11 +81,63 @@ class IoTDataBridge:
     
     def _setup_logging(self):
         """Setup structured logging"""
-        # Custom formatter for clean logs (Device와 동일)
-        def simple_formatter(logger, method_name, event_dict):
-            """Simple formatter for clean logs"""
+        # Custom formatter for detailed logs
+        def detailed_formatter(logger, method_name, event_dict):
+            """Detailed formatter showing all fields"""
             message = event_dict.get('event', '')
-            return message
+            
+            # Extract key fields
+            trace_id = event_dict.get('trace_id', '')
+            equip_tag = event_dict.get('equip_tag', '')
+            message_id = event_dict.get('message_id', '')
+            raw_value = event_dict.get('raw_value', '')
+            object_name = event_dict.get('object', '')
+            value = event_dict.get('value', '')
+            value_type = event_dict.get('value_type', '')
+            device_id = event_dict.get('device_id', '')
+            target_devices = event_dict.get('target_devices', '')
+            device_count = event_dict.get('device_count', '')
+            total_devices = event_dict.get('total_devices', '')
+            success_count = event_dict.get('success_count', '')
+            failed_count = event_dict.get('failed_count', '')
+            topic = event_dict.get('topic', '')
+            source = event_dict.get('source', '')
+            
+            # Build detailed message
+            parts = [message]
+            
+            if trace_id:
+                parts.append(f"trace_id={trace_id}")
+            if equip_tag:
+                parts.append(f"equip_tag={equip_tag}")
+            if message_id:
+                parts.append(f"message_id={message_id}")
+            if raw_value != '':
+                parts.append(f"raw_value={raw_value}")
+            if object_name:
+                parts.append(f"object={object_name}")
+            if value != '':
+                parts.append(f"value={value}")
+            if value_type:
+                parts.append(f"value_type={value_type}")
+            if device_id:
+                parts.append(f"device_id={device_id}")
+            if target_devices:
+                parts.append(f"target_devices={target_devices}")
+            if device_count:
+                parts.append(f"device_count={device_count}")
+            if total_devices:
+                parts.append(f"total_devices={total_devices}")
+            if success_count:
+                parts.append(f"success_count={success_count}")
+            if failed_count:
+                parts.append(f"failed_count={failed_count}")
+            if topic:
+                parts.append(f"topic={topic}")
+            if source:
+                parts.append(f"source={source}")
+            
+            return " ".join(parts)
         
         structlog.configure(
             processors=[
@@ -94,7 +146,7 @@ class IoTDataBridge:
                 structlog.processors.TimeStamper(fmt="%H:%M:%S"),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                simple_formatter
+                detailed_formatter
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
