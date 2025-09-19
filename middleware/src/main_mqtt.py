@@ -194,7 +194,7 @@ class IoTDataBridge:
         message_id = raw_payload.get('Message.ID', 'Unknown')
         raw_value = raw_payload.get('VALUE', 'Unknown')
         
-        self.logger.info("📥 INPUT LAYER: Raw data received", 
+        self.logger.info("INPUT LAYER: Raw data received", 
                         trace_id=event.trace_id, 
                         equip_tag=equip_tag,
                         message_id=message_id,
@@ -204,7 +204,7 @@ class IoTDataBridge:
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
-        self.logger.info("🔄 MAPPING LAYER: Data parsed and mapped", 
+        self.logger.info("MAPPING LAYER: Data parsed and mapped", 
                         trace_id=event.trace_id, 
                         object=event.object, 
                         value=event.value, 
@@ -213,7 +213,7 @@ class IoTDataBridge:
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
-        self.logger.info("🎯 RESOLVER LAYER: Target devices identified", 
+        self.logger.info("RESOLVER LAYER: Target devices identified", 
                         trace_id=event.trace_id, 
                         object=event.object, 
                         target_devices=event.target_devices,
