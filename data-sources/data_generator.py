@@ -615,6 +615,490 @@ def generate_random_test_data():
             }
         },
 
+        # Diesel Engine 1 Cylinder Exhaust Gas Temperatures
+        {
+            "name": "Diesel Engine 1 Cylinder 1 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy1ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 1 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 2 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy2ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 2 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 3 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy3ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 3 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 4 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy4ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 4 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 5 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy5ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 5 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 6 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy6ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 6 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 7 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy7ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 7 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 8 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy8ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 8 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 9 Exhaust Gas Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cy9ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(200.0, 450.0), 1)  # Cylinder 9 Exhaust Gas Temp 200-450°C
+                }
+            }
+        },
+
+        # Diesel Engine 1 Cylinder Maximum Pressures
+        {
+            "name": "Diesel Engine 1 Cylinder 1 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl1_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 1 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 2 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl2_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 2 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 3 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl3_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 3 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 4 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl4_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 4 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 5 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl5_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 5 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 6 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl6_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 6 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 7 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl7_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 7 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 8 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl8_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 8 Max Pressure 80-120 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Cylinder 9 Maximum Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "Cyl9_Pmax",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Cylinder 9 Max Pressure 80-120 bar
+                }
+            }
+        },
+
+        # Diesel Engine 1 System Data
+        {
+            "name": "Diesel Engine 1 Fuel Gas Mass Flow",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "FGMassFlow",
+                    "VALUE": round(random.uniform(100.0, 500.0), 1)  # Fuel Gas Mass Flow 100-500 kg/h
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Fuel Oil Inlet Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "FOInletPress",
+                    "VALUE": round(random.uniform(15.0, 25.0), 1)  # Fuel Oil Inlet Pressure 15-25 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Fuel Oil Inlet Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "FOInletTemp",
+                    "VALUE": round(random.uniform(80.0, 120.0), 1)  # Fuel Oil Inlet Temperature 80-120°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Exhaust Gas Inlet Temperature Alarm",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "GE1_EXH_GAS_TEMP_TC_IN_H_AL",
+                    "VALUE": random.choice([True, False])  # Boolean alarm
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Exhaust Gas Outlet Temperature Alarm",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "GE1_EXH_GAS_TEMP_TC_OUT_H_AL",
+                    "VALUE": random.choice([True, False])  # Boolean alarm
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Lubricating Oil Inlet Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "LOInletTemp",
+                    "VALUE": round(random.uniform(60.0, 90.0), 1)  # Lubricating Oil Inlet Temperature 60-90°C
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Scavenge Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "ScavPress",
+                    "VALUE": round(random.uniform(2.0, 4.0), 1)  # Scavenge Pressure 2-4 bar
+                }
+            }
+        },
+        {
+            "name": "Diesel Engine 1 Scavenge Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DE001",
+                    "Message.ID": "ScavTemp",
+                    "VALUE": round(random.uniform(30.0, 60.0), 1)  # Scavenge Temperature 30-60°C
+                }
+            }
+        },
+
+        # Diesel Generator Running Hours
+        {
+            "name": "Diesel Generator 1 Running Hours",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DG-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELGENERATORDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DG001",
+                    "Message.ID": "RunhourHR",
+                    "VALUE": round(random.uniform(1000.0, 50000.0), 1)  # Generator 1 Running Hours 1000-50000
+                }
+            }
+        },
+        {
+            "name": "Diesel Generator 2 Running Hours",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "DG-GW-02",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "DIESELGENERATORDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "DG002",
+                    "Message.ID": "RunhourHR",
+                    "VALUE": round(random.uniform(1000.0, 50000.0), 1)  # Generator 2 Running Hours 1000-50000
+                }
+            }
+        },
+
         # Gas Engine 1 Data
         {
             "name": "Gas Engine 1 RPM",
@@ -647,6 +1131,40 @@ def generate_random_test_data():
                     "Equip.Tag": "GE001",
                     "Message.ID": "ExhGasInletTempA",
                     "VALUE": round(random.uniform(200.0, 600.0), 1)  # Exhaust Gas Inlet Temp 200-600°C
+                }
+            }
+        },
+        {
+            "name": "Gas Engine 1 Exhaust Gas Outlet Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "GE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "GASENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "GE001",
+                    "Message.ID": "ExhGasOutletTemp",
+                    "VALUE": round(random.uniform(150.0, 400.0), 1)  # Exhaust Gas Outlet Temp 150-400°C
+                }
+            }
+        },
+        {
+            "name": "Gas Engine 1 Lubricating Oil Inlet Pressure",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "GE-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "GASENGINEDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "GE001",
+                    "Message.ID": "LOInletPress",
+                    "VALUE": round(random.uniform(2.0, 6.0), 1)  # Lubricating Oil Inlet Pressure 2-6 bar
                 }
             }
         }

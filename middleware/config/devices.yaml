@@ -1,6 +1,9 @@
 # Device Object Catalog - Maps objects to devices
 # Based on marine equipment data specifications
 
+
+# object -> device 매핑 목록
+
 objects:
   # GPS Navigation Data - VM-A and VM-C receive all GPS data
   GPS.Latitude:
