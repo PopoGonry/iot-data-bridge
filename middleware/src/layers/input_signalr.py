@@ -111,7 +111,9 @@ class InputLayer(InputLayerInterface):
     """Input Layer - SignalR only"""
     
     def __init__(self, config: InputConfig, callback: Callable[[IngressEvent], None]):
-        super().__init__(config, callback)
+        super().__init__("signalr_input")
+        self.config = config
+        self.callback = callback
         self.handler = None
         
         # Initialize handler based on input type
@@ -136,3 +138,27 @@ class InputLayer(InputLayerInterface):
         """Stop input layer"""
         if self.handler:
             await self.handler.stop()
+    
+    async def process_raw_data(self, raw_data: dict, meta: dict) -> Optional[Any]:
+        """Process raw input data"""
+        try:
+            # Create ingress event from raw data
+            event = IngressEvent(
+                uuid=str(uuid.uuid4()),
+                timestamp=asyncio.get_event_loop().time(),
+                source='signalr',
+                topic=meta.get('group', 'unknown'),
+                payload=raw_data
+            )
+            
+            # Call the callback function
+            if self.callback:
+                await self.callback(event)
+            
+            self._increment_processed()
+            return event
+            
+        except Exception as e:
+            self.logger.error("Error processing raw data", error=str(e))
+            self._increment_error()
+            return None
