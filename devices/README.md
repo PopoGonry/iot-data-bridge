@@ -6,9 +6,12 @@ IoT Data Bridge에서 전송된 데이터를 수신하고 처리하는 Device입
 
 ```
 devices/
-├── device.py                      # Device 실행 파일 (명령행 인수 사용)
-├── start.bat                      # Windows 실행 스크립트
-├── start.sh                       # Linux/macOS 실행 스크립트
+├── device.py                      # Device 실행 파일 (MQTT, 명령행 인수 사용)
+├── signalr_device.py              # Device 실행 파일 (SignalR, 명령행 인수 사용)
+├── start-mqtt.bat                 # MQTT Windows 실행 스크립트
+├── start-mqtt.sh                  # MQTT Linux/macOS 실행 스크립트
+├── start-signalr.bat              # SignalR Windows 실행 스크립트
+├── start-signalr.sh               # SignalR Linux/macOS 실행 스크립트
 ├── requirements.txt               # 프로젝트 의존성
 └── README.md                     # 이 파일
 ```
@@ -16,15 +19,28 @@ devices/
 ## 🚀 실행 방법
 
 ### **간편 실행 (추천)**
+
+#### **MQTT 버전**
 ```bash
 # Windows
-start.bat
+start-mqtt.bat
 
 # Linux/macOS
-./start.sh
+./start-mqtt.sh
+```
+
+#### **SignalR 버전**
+```bash
+# Windows
+start-signalr.bat
+
+# Linux/macOS
+./start-signalr.sh
 ```
 
 ### **명령행 인수 사용**
+
+#### **MQTT 버전**
 ```bash
 # Device ID, MQTT 호스트, 포트 지정
 python device.py VM-A localhost 1883
@@ -35,6 +51,17 @@ python device.py MyDevice mqtt.example.com 1883
 python device.py VM-A
 ```
 
+#### **SignalR 버전**
+```bash
+# Device ID, SignalR URL, Group 지정
+python signalr_device.py VM-A http://localhost:5000/hub VM-A
+python signalr_device.py VM-B http://192.168.1.100:5000/hub VM-B
+python signalr_device.py MyDevice http://signalr.example.com:5000/hub MyGroup
+
+# Device ID만 지정 (기본값: http://localhost:5000/hub, device_id)
+python signalr_device.py VM-A
+```
+
 ## ⚙️ 설정
 
 ### **명령행 인수**
@@ -43,6 +70,8 @@ python device.py VM-A
 - `mqtt_port`: MQTT 브로커 포트 (기본값: 1883)
 
 ### **자동 생성되는 설정**
+
+#### **MQTT 버전**
 ```yaml
 device_id: "VM-A"  # 명령행에서 지정
 mqtt:
@@ -51,6 +80,20 @@ mqtt:
   topic: "devices/vm-a/ingress"  # device_id 기반 자동 생성
   qos: 1
   keepalive: 60
+logging:
+  level: "INFO"
+  file: "device.log"
+  max_size: 10485760
+  backup_count: 5
+```
+
+#### **SignalR 버전**
+```yaml
+device_id: "VM-A"  # 명령행에서 지정
+signalr:
+  url: "http://localhost:5000/hub"  # 명령행에서 지정
+  group: "VM-A"                     # 명령행에서 지정
+  target: "ingress"
 logging:
   level: "INFO"
   file: "device.log"
@@ -97,6 +140,8 @@ Device VM-A configuration:
 ## 🚀 VM별 배포
 
 ### **각 VM에서 실행**
+
+#### **MQTT 버전**
 ```bash
 # VM-A에서
 python device.py VM-A localhost 1883
@@ -105,11 +150,31 @@ python device.py VM-A localhost 1883
 python device.py VM-B 192.168.1.100 1883
 ```
 
-### **start.sh 스크립트 사용**
+#### **SignalR 버전**
+```bash
+# VM-A에서
+python signalr_device.py VM-A http://localhost:5000/hub VM-A
+
+# VM-B에서 (다른 SignalR Hub)
+python signalr_device.py VM-B http://192.168.1.100:5000/hub VM-B
+```
+
+### **스크립트 사용**
+
+#### **MQTT 버전**
 ```bash
 # 대화형으로 설정 입력
-./start.sh
+./start-mqtt.sh
 # Enter Device ID (default: VM-A): VM-A
 # Enter MQTT broker host (default: localhost): 192.168.1.100
 # Enter MQTT broker port (default: 1883): 1883
+```
+
+#### **SignalR 버전**
+```bash
+# 대화형으로 설정 입력
+./start-signalr.sh
+# Enter Device ID (default: VM-A): VM-A
+# Enter SignalR hub URL (default: http://localhost:5000/hub): http://192.168.1.100:5000/hub
+# Enter Group name (default: VM-A): VM-A
 ```

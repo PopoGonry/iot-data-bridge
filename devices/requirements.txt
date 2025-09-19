@@ -1,4 +1,5 @@
 # Devices Dependencies
 aiomqtt==2.0.0
+signalrcore==0.9.8
 pyyaml==6.0.1
 structlog==23.2.0

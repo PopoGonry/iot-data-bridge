@@ -67,22 +67,34 @@ cd ../devices && pip install -r requirements.txt
 
 ### 2. 간편 실행
 
+#### **MQTT 버전**
 ```bash
-# Data Sources
-cd data-sources && start.bat    # Windows
-cd data-sources && ./start.sh   # Linux/macOS
+# Data Sources (MQTT)
+cd data-sources && start-mqtt.bat    # Windows
+cd data-sources && ./start-mqtt.sh   # Linux/macOS
 
-# Middleware - MQTT 버전
+# Middleware (MQTT)
 cd middleware && start-mqtt.bat      # Windows  
 cd middleware && ./start-mqtt.sh     # Linux/macOS
 
-# Middleware - SignalR 버전
+# Devices (MQTT)
+cd devices && start-mqtt.bat         # Windows
+cd devices && ./start-mqtt.sh        # Linux/macOS
+```
+
+#### **SignalR 버전**
+```bash
+# Data Sources (SignalR)
+cd data-sources && start-signalr.bat    # Windows
+cd data-sources && ./start-signalr.sh   # Linux/macOS
+
+# Middleware (SignalR)
 cd middleware && start-signalr.bat   # Windows
 cd middleware && ./start-signalr.sh  # Linux/macOS
 
-# Devices
-cd devices && start.bat         # Windows
-cd devices && ./start.sh        # Linux/macOS
+# Devices (SignalR)
+cd devices && start-signalr.bat         # Windows
+cd devices && ./start-signalr.sh        # Linux/macOS
 ```
 
 ### 3. 설정 파일 수정 (필요시)
@@ -97,6 +109,7 @@ cd devices && ./start.sh        # Linux/macOS
 
 ### 4. 전체 시스템 테스트
 
+#### **MQTT 버전 테스트**
 ```bash
 # 미들웨어 디렉토리에서
 cd middleware
@@ -107,16 +120,39 @@ cd ../data-sources
 python mqtt_publisher.py localhost 1883
 ```
 
+#### **SignalR 버전 테스트**
+```bash
+# 미들웨어 디렉토리에서 (SignalR Hub 자동 시작)
+cd middleware
+python src/main_signalr.py
+
+# 별도 터미널에서 데이터 전송 (5초마다 랜덤 데이터)
+cd ../data-sources
+python signalr_publisher.py http://localhost:5000/hub iot_clients
+```
+
 ### 5. Device 실행
 
+#### **MQTT 버전**
 ```bash
 # 각 VM에서 Device 실행 (명령행 인수 사용)
 cd devices
 python device.py VM-A localhost 1883
 python device.py VM-B 192.168.1.100 1883
 
-# 또는 start.sh 스크립트 사용
-./start.sh  # 대화형으로 device_id, host, port 입력
+# 또는 start-mqtt.sh 스크립트 사용
+./start-mqtt.sh  # 대화형으로 device_id, host, port 입력
+```
+
+#### **SignalR 버전**
+```bash
+# 각 VM에서 Device 실행 (명령행 인수 사용)
+cd devices
+python signalr_device.py VM-A http://localhost:5000/hub VM-A
+python signalr_device.py VM-B http://192.168.1.100:5000/hub VM-B
+
+# 또는 start-signalr.sh 스크립트 사용
+./start-signalr.sh  # 대화형으로 device_id, url, group 입력
 ```
 
 ## ⚙️ 설정
