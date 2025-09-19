@@ -66,8 +66,10 @@ class SignalRInputHandler:
                            group=self.config.group)
             
         except Exception as e:
-            self.logger.error("SignalR connection error", error=str(e))
             import traceback
+            print(f"SignalR connection error: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
+            self.logger.error("SignalR connection error", error=str(e))
             self.logger.error("SignalR connection traceback", traceback=traceback.format_exc())
             raise
     
