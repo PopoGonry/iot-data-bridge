@@ -112,11 +112,29 @@ class IoTDevice:
                                 device_id=self.device_id, 
                                 error=str(e))
     
-    async def _on_message_received(self, group: str, target: str, message: str):
+    async def _on_message_received(self, *args):
         """Handle received message from SignalR hub"""
         try:
+            # SignalR messages come as a list of arguments
+            if not args or len(args) < 1:
+                self.logger.warning("Received empty or invalid SignalR message", args=args)
+                return
+            
+            # First argument should be the message content
+            message = args[0]
+            self.logger.info("Processing message", message=message, message_type=type(message).__name__)
+            
             # Parse message
-            data = json.loads(message)
+            if isinstance(message, str):
+                data = json.loads(message)
+            elif isinstance(message, list) and len(message) > 0:
+                # If message is a list, take the first element
+                if isinstance(message[0], str):
+                    data = json.loads(message[0])
+                else:
+                    data = message[0]
+            else:
+                data = message
             
             # Extract object and value
             object_name = data.get('object', '')
