@@ -46,25 +46,33 @@ class IoTDataBridge:
     async def initialize(self):
         """Initialize the IoT Data Bridge"""
         try:
+            print("Loading configuration...")
             # Load configuration
             await self._load_config()
             
+            print("Setting up logging...")
             # Setup logging
             self._setup_logging()
             
+            print("Initializing catalogs...")
             # Initialize catalogs
             await self._initialize_catalogs()
             
+            print("Initializing layers...")
             # Initialize layers
             await self._initialize_layers()
             
+            print("Starting SignalR hub...")
             # Start SignalR hub
             self._start_signalr_hub()
             
+            print("IoT Data Bridge (SignalR) initialized successfully")
             self.logger.info("IoT Data Bridge (SignalR) initialized successfully")
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
+            import traceback
+            traceback.print_exc()
             sys.exit(1)
     
     async def _load_config(self):
@@ -229,15 +237,21 @@ class IoTDataBridge:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
                 return
             
-            # Start SignalR hub
-            result = subprocess.run([
+            # Start SignalR hub in background
+            result = subprocess.Popen([
                 "dotnet", "run"
-            ], cwd=str(signalr_hub_dir), capture_output=True, text=True)
+            ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
-            if result.returncode == 0:
+            # Give it a moment to start
+            import time
+            time.sleep(2)
+            
+            # Check if process is still running
+            if result.poll() is None:
                 print("SignalR hub started successfully")
             else:
-                print(f"Failed to start SignalR hub: {result.stderr}")
+                stdout, stderr = result.communicate()
+                print(f"Failed to start SignalR hub: {stderr.decode()}")
                 
         except FileNotFoundError:
             print("Warning: dotnet not found. Please install .NET SDK or start SignalR hub manually.")
