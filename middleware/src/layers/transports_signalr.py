@@ -55,7 +55,7 @@ class SignalRTransport:
             }
             
             # Send message to device group
-            self.connection.invoke("SendMessage", group, target, json.dumps(payload))
+            self.connection.send("SendMessage", [group, target, json.dumps(payload)])
             
             return True
             

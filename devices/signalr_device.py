@@ -62,7 +62,7 @@ class IoTDevice:
             self.logger.info("Connected to SignalR hub", device_id=self.device_id)
             
             # Join device group
-            self.connection.invoke("JoinGroup", group)
+            self.connection.send("JoinGroup", [group])
             self.logger.info("Joined group", device_id=self.device_id, group=group)
             
             self.is_running = True
@@ -86,7 +86,7 @@ class IoTDevice:
                 # Leave group
                 signalr_config = self.config.get('signalr', {})
                 group = signalr_config.get('group', self.device_id)
-                self.connection.invoke("LeaveGroup", group)
+                self.connection.send("LeaveGroup", [group])
                 
                 # Disconnect
                 self.connection.stop()
