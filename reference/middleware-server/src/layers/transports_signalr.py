@@ -1,5 +1,5 @@
 """
-Transports Layer - MQTT Only
+Transports Layer - SignalR Only
 """
 
 import asyncio
@@ -7,7 +7,7 @@ import json
 from typing import Optional, Callable, List
 import structlog
 
-from aiomqtt import Client as MQTTClient
+from signalrcore import HubConnectionBuilder
 
 from layers.base import TransportsLayerInterface
 from models.events import ResolvedEvent, TransportEvent, DeviceTarget, TransportConfig, TransportType, DeviceIngestLog
@@ -15,63 +15,59 @@ from models.config import TransportsConfig
 from catalogs.device_catalog import DeviceCatalog
 
 
-class MQTTTransport:
-    """MQTT transport handler"""
+class SignalRTransport:
+    """SignalR transport handler"""
     
     def __init__(self, config):
         self.config = config
-        self.logger = structlog.get_logger("mqtt_transport")
-        self.client = None
+        self.logger = structlog.get_logger("signalr_transport")
+        self.connection = None
     
     async def send_to_device(self, device_target: DeviceTarget) -> bool:
-        """Send data to device via MQTT"""
+        """Send data to device via SignalR"""
         try:
-            if not self.client:
-                self.client = MQTTClient(
-                    hostname=self.config.host,
-                    port=self.config.port,
-                    username=self.config.username,
-                    password=self.config.password,
-                    keepalive=self.config.keepalive
-                )
+            if not self.connection:
+                builder = HubConnectionBuilder()
+                builder.with_url(self.config.url)
+                
+                if self.config.username and self.config.password:
+                    builder.with_authentication(self.config.username, self.config.password)
+                
+                self.connection = builder.build()
+                await self.connection.start()
             
-            # Get device-specific topic
+            # Get device-specific configuration
             device_config = device_target.transport_config.config
-            topic = device_config.get('topic', f"devices/{device_target.device_id}/ingress")
+            group = device_config.get('group', device_target.device_id)
+            target = device_config.get('target', 'ingress')
             
             # Prepare payload
             payload = {
                 "object": device_target.object,
-                "value": device_target.value
+                "value": device_target.value,
+                "timestamp": asyncio.get_event_loop().time()
             }
             
-            # Send message
-            async with self.client:
-                
-                await self.client.publish(
-                    topic,
-                    payload=json.dumps(payload),
-                    qos=device_config.get('qos', 1)
-                )
-                
+            # Send message to group
+            await self.connection.invoke("SendToGroup", group, target, json.dumps(payload))
             
-            self.logger.info("디바이스로 메시지 전송",
+            self.logger.debug("Sent SignalR message to device",
                             device_id=device_target.device_id,
-                            topic=topic,
-                            object=device_target.object,
-                            value=device_target.value)
+                            group=group,
+                            target=target,
+                            object=device_target.object)
             
             return True
             
         except Exception as e:
-            self.logger.error("Error sending MQTT message",
+            self.logger.error("Error sending SignalR message",
                             device_id=device_target.device_id,
                             error=str(e))
             return False
 
 
 class TransportsLayer(TransportsLayerInterface):
-    """Transports Layer - MQTT Only"""
+    """Transports Layer - SignalR Only"""
     
     def __init__(self, config: TransportsConfig, device_catalog: DeviceCatalog, device_ingest_callback: Callable[[DeviceIngestLog], None]):
         super().__init__("transports_layer")
@@ -84,25 +80,25 @@ class TransportsLayer(TransportsLayerInterface):
     async def start(self):
         """Start transports layer"""
         try:
-            self.logger.info("Starting MQTT transports layer")
+            self.logger.info("Starting SignalR transports layer")
             
-            if not self.config.mqtt:
-                raise ValueError("MQTT configuration is required")
+            if not self.config.signalr:
+                raise ValueError("SignalR configuration is required")
             
-            self.transport = MQTTTransport(self.config.mqtt)
+            self.transport = SignalRTransport(self.config.signalr)
             self.is_running = True
             
-            self.logger.info("MQTT transports layer started successfully")
+            self.logger.info("SignalR transports layer started successfully")
             
         except Exception as e:
-            self.logger.error("Failed to start MQTT transports layer", error=str(e))
+            self.logger.error("Failed to start SignalR transports layer", error=str(e))
             raise
     
     async def stop(self):
         """Stop transports layer"""
-        self.logger.info("Stopping MQTT transports layer")
+        self.logger.info("Stopping SignalR transports layer")
         self.is_running = False
-        self.logger.info("MQTT transports layer stopped")
+        self.logger.info("SignalR transports layer stopped")
     
     async def send_to_devices(self, event: ResolvedEvent):
         """Send resolved event to target devices"""
@@ -117,13 +113,15 @@ class TransportsLayer(TransportsLayerInterface):
             # Create device targets
             device_targets = []
             for device_id in event.target_devices:
-                # Create transport config (simplified - no device profile needed)
+                device_profile = self.device_catalog.get_device_profile(device_id)
+                if not device_profile:
+                    self.logger.warning("Device profile not found", device_id=device_id)
+                    continue
+                
+                # Create transport config
                 transport_config = TransportConfig(
-                    type=TransportType.MQTT,
-                    config={
-                        'topic': f'devices/{device_id.lower()}/ingress',
-                        'qos': 1
-                    }
+                    type=TransportType.SIGNALR,
+                    config=device_profile.signalr_config
                 )
                 
                 # Create device target

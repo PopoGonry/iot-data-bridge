@@ -1,5 +1,5 @@
 """
-Input Layer - MQTT Only
+Input Layer - SignalR Only
 """
 
 import asyncio
@@ -8,63 +8,72 @@ import uuid
 from typing import Optional, Callable, Any
 import structlog
 
-from aiomqtt import Client as MQTTClient
+from signalrcore import HubConnectionBuilder
 
 from layers.base import InputLayerInterface
 from models.events import IngressEvent
 from models.config import InputConfig
 
 
-class MQTTInputHandler:
-    """MQTT input handler"""
+class SignalRInputHandler:
+    """SignalR input handler"""
     
     def __init__(self, config, callback: Callable[[IngressEvent], None]):
         self.config = config
         self.callback = callback
-        self.logger = structlog.get_logger("mqtt_input")
-        self.client = None
+        self.logger = structlog.get_logger("signalr_input")
+        self.connection = None
         self.is_running = False
     
     async def start(self):
-        """Start MQTT client"""
+        """Start SignalR connection"""
         try:
+            # Build connection
+            builder = HubConnectionBuilder()
+            builder.with_url(self.config.url)
             
-            self.client = MQTTClient(
-                hostname=self.config.host,
-                port=self.config.port,
-                username=self.config.username,
-                password=self.config.password,
-                keepalive=self.config.keepalive
-            )
+            if self.config.username and self.config.password:
+                builder.with_authentication(self.config.username, self.config.password)
             
-            async with self.client:
-                self.is_running = True
-                # Subscribe to topic
-                await self.client.subscribe(self.config.topic, qos=self.config.qos)
+            self.connection = builder.build()
+            
+            # Register message handler
+            self.connection.on("ReceiveMessage", self._on_message)
+            
+            # Start connection
+            await self.connection.start()
+            self.is_running = True
+            
+            # Join group
+            await self.connection.invoke("JoinGroup", self.config.group)
+            
+            self.logger.info("SignalR connection started", 
+                           url=self.config.url,
+                           group=self.config.group)
+            
+            # Keep connection alive
+            while self.is_running:
+                await asyncio.sleep(1)
                 
-                async for message in self.client.messages:
-                    if not self.is_running:
-                        break
-                    
-                    try:
-                        await self._process_message(message)
-                    except Exception as e:
-                        pass
-                        
         except Exception as e:
+            self.logger.error("SignalR connection error", error=str(e))
             raise
     
     async def stop(self):
-        """Stop MQTT client"""
+        """Stop SignalR connection"""
+        self.logger.info("Stopping SignalR connection")
         self.is_running = False
-        # MQTT client will be closed when exiting the async with context
+        if self.connection:
+            await self.connection.stop()
     
-    async def _process_message(self, message):
-        """Process incoming MQTT message"""
+    async def _on_message(self, message):
+        """Handle incoming SignalR message"""
         try:
-            
-            # Parse message payload
-            payload = json.loads(message.payload.decode('utf-8'))
+            # Parse message
+            if isinstance(message, str):
+                payload = json.loads(message)
+            else:
+                payload = message
             
             # Generate trace ID
             trace_id = str(uuid.uuid4())
@@ -74,22 +83,24 @@ class MQTTInputHandler:
                 trace_id=trace_id,
                 raw=payload,
                 meta={
-                    "source": "mqtt",
-                    "topic": message.topic,
-                    "qos": message.qos
+                    "source": "signalr",
+                    "group": self.config.group
                 }
             )
-            
             
             # Send to mapping layer
             await self.callback(ingress_event)
             
+            self.logger.debug("Processed SignalR message", 
+                            trace_id=trace_id,
+                            group=self.config.group)
+            
         except Exception as e:
-            pass
+            self.logger.error("Error processing SignalR message", error=str(e))
 
 
 class InputLayer(InputLayerInterface):
-    """Input Layer - MQTT Only"""
+    """Input Layer - SignalR Only"""
     
     def __init__(self, config: InputConfig, mapping_layer_callback: Callable[[IngressEvent], None]):
         super().__init__("input_layer")
@@ -101,12 +112,13 @@ class InputLayer(InputLayerInterface):
     async def start(self):
         """Start input layer"""
         try:
+            self.logger.info("Starting SignalR input layer")
             
-            if not self.config.mqtt:
-                raise ValueError("MQTT configuration is required")
+            if not self.config.signalr:
+                raise ValueError("SignalR configuration is required")
             
-            self.handler = MQTTInputHandler(
-                self.config.mqtt,
+            self.handler = SignalRInputHandler(
+                self.config.signalr,
                 self._on_ingress_event
             )
             
@@ -114,12 +126,15 @@ class InputLayer(InputLayerInterface):
             self._task = asyncio.create_task(self.handler.start())
             self.is_running = True
             
+            self.logger.info("SignalR input layer started successfully")
             
         except Exception as e:
+            self.logger.error("Failed to start SignalR input layer", error=str(e))
             raise
     
     async def stop(self):
         """Stop input layer"""
+        self.logger.info("Stopping SignalR input layer")
         self.is_running = False
         
         if self.handler:
@@ -132,6 +147,7 @@ class InputLayer(InputLayerInterface):
             except asyncio.CancelledError:
                 pass
         
+        self.logger.info("SignalR input layer stopped")
     
     async def process_raw_data(self, raw_data: dict, meta: dict) -> Optional[Any]:
         """Process raw input data"""
@@ -149,6 +165,7 @@ class InputLayer(InputLayerInterface):
             return ingress_event
             
         except Exception as e:
+            self.logger.error("Error processing raw data", error=str(e))
             return None
     
     async def _on_ingress_event(self, event: IngressEvent):
@@ -158,3 +175,6 @@ class InputLayer(InputLayerInterface):
             await self.mapping_layer_callback(event)
         except Exception as e:
             self._increment_error()
+            self.logger.error("Error handling ingress event", 
+                            trace_id=event.trace_id, 
+                            error=str(e))

@@ -57,3 +57,4 @@ class AppConfig(BaseModel):
     input: InputConfig = Field(..., description="Input layer configuration")
     transports: TransportsConfig = Field(..., description="Transports layer configuration")
     logging: LoggingConfig = Field(default_factory=LoggingConfig, description="Logging configuration")
+

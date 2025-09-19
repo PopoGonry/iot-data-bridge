@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IoT Data Bridge - MQTT Only Main Entry Point
+IoT Data Bridge - Main Entry Point
 """
 
 import asyncio
@@ -15,10 +15,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 import structlog
 import yaml
 
-from layers.input_mqtt import InputLayer
+from layers.input import InputLayer
 from layers.mapping import MappingLayer
 from layers.resolver import ResolverLayer
-from layers.transports_mqtt import TransportsLayer
+from layers.transports import TransportsLayer
 from layers.logging import LoggingLayer
 from catalogs.mapping_catalog import MappingCatalog
 from catalogs.device_catalog import DeviceCatalog
@@ -27,9 +27,9 @@ from models.events import IngressEvent, MappedEvent, ResolvedEvent, MiddlewareEv
 
 
 class IoTDataBridge:
-    """Main IoT Data Bridge application - MQTT Only"""
+    """Main IoT Data Bridge application"""
     
-    def __init__(self, config_path: str = "config/app-mqtt.yaml"):
+    def __init__(self, config_path: str = "config/app.yaml"):
         self.config_path = config_path
         self.config = None
         self.logger = None
@@ -61,6 +61,7 @@ class IoTDataBridge:
             # Initialize layers
             await self._initialize_layers()
             
+            self.logger.info("IoT Data Bridge initialized successfully")
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -79,20 +80,17 @@ class IoTDataBridge:
     
     def _setup_logging(self):
         """Setup structured logging"""
-        # Custom formatter for clean logs (Device와 동일)
-        def simple_formatter(logger, method_name, event_dict):
-            """Simple formatter for clean logs"""
-            message = event_dict.get('event', '')
-            return message
-        
         structlog.configure(
             processors=[
                 structlog.stdlib.filter_by_level,
+                structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
-                structlog.processors.TimeStamper(fmt="%H:%M:%S"),
+                structlog.stdlib.PositionalArgumentsFormatter(),
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.processors.StackInfoRenderer(),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                simple_formatter
+                structlog.processors.JSONRenderer()
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -101,47 +99,16 @@ class IoTDataBridge:
         )
         
         # Setup file logging
-        from logging.handlers import RotatingFileHandler
-        
-        # Create logs directory
-        log_file = Path(self.config.logging.file)
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Setup rotating file handler
-        file_handler = RotatingFileHandler(
-            self.config.logging.file,
-            encoding='utf-8',
-            maxBytes=self.config.logging.max_size,
-            backupCount=self.config.logging.backup_count
-        )
-        file_handler.setLevel(logging.INFO)  # 파일에는 INFO 레벨만
-        
-        # Setup console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.DEBUG)  # 콘솔에는 모든 로그 표시
-        
-        # Setup formatters (Device와 동일한 포맷)
-        file_formatter = logging.Formatter(
-            '%(asctime)s | INFO | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        console_formatter = logging.Formatter(
-            '%(asctime)s | %(levelname)-5s | %(message)s',
-            datefmt='%H:%M:%S'
-        )
-        
-        file_handler.setFormatter(file_formatter)
-        console_handler.setFormatter(console_formatter)
-        
-        # Configure logging
         logging.basicConfig(
             level=getattr(logging, self.config.logging.level.upper()),
             format='%(message)s',
-            handlers=[file_handler, console_handler]
+            handlers=[
+                logging.FileHandler(self.config.logging.file, encoding='utf-8'),
+                logging.StreamHandler(sys.stdout)
+            ]
         )
         
-        self.logger = structlog.get_logger("iot_data_bridge_mqtt")
-        
+        self.logger = structlog.get_logger("iot_data_bridge")
     
     async def _initialize_catalogs(self):
         """Initialize mapping and device catalogs"""
@@ -178,7 +145,7 @@ class IoTDataBridge:
             self._handle_mapped_event
         )
         
-        # Initialize input layer (MQTT only)
+        # Initialize input layer
         self.input_layer = InputLayer(
             self.config.input,
             self._handle_ingress_event
@@ -207,6 +174,7 @@ class IoTDataBridge:
     async def start(self):
         """Start the application"""
         self.running = True
+        self.logger.info("Starting IoT Data Bridge")
         
         try:
             # Start all layers
@@ -216,11 +184,6 @@ class IoTDataBridge:
                 self.logging_layer.start(),
                 return_exceptions=True
             )
-            
-            # Keep running until stopped
-            while self.running:
-                await asyncio.sleep(1)
-                
         except Exception as e:
             self.logger.error("Error in main loop", error=str(e))
             raise
@@ -228,6 +191,7 @@ class IoTDataBridge:
     async def stop(self):
         """Stop the application"""
         self.running = False
+        self.logger.info("Stopping IoT Data Bridge")
         
         # Stop all layers
         if self.input_layer:
@@ -236,21 +200,11 @@ class IoTDataBridge:
             await self.transports_layer.stop()
         if self.logging_layer:
             await self.logging_layer.stop()
-        
-        # Stop MQTT broker
-        self._stop_mqtt_broker()
-    
-    def _stop_mqtt_broker(self):
-        """Stop MQTT broker"""
-        import subprocess
-        try:
-            subprocess.run(["pkill", "mosquitto"], check=False)
-        except Exception as e:
-            pass
     
     def setup_signal_handlers(self):
         """Setup signal handlers for graceful shutdown"""
         def signal_handler(signum, frame):
+            self.logger.info(f"Received signal {signum}, initiating shutdown")
             asyncio.create_task(self.stop())
         
         signal.signal(signal.SIGINT, signal_handler)
