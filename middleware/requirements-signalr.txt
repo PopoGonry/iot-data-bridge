@@ -1,5 +1,5 @@
 # Middleware Dependencies - SignalR Only
-signalrcore==0.9.8
+signalrcore==0.9.5
 pydantic==2.5.0
 structlog==23.2.0
 pyyaml==6.0.1
