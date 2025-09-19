@@ -81,63 +81,23 @@ class IoTDataBridge:
     
     def _setup_logging(self):
         """Setup structured logging"""
-        # Custom formatter for detailed logs
-        def detailed_formatter(logger, method_name, event_dict):
-            """Detailed formatter showing all fields"""
+        # Custom formatter for console logs (same as file format)
+        def console_formatter(logger, method_name, event_dict):
+            """Console formatter matching file log format"""
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             message = event_dict.get('event', '')
             
             # Extract key fields
-            trace_id = event_dict.get('trace_id', '')
-            equip_tag = event_dict.get('equip_tag', '')
-            message_id = event_dict.get('message_id', '')
-            raw_value = event_dict.get('raw_value', '')
+            device_id = event_dict.get('device_id', '')
             object_name = event_dict.get('object', '')
             value = event_dict.get('value', '')
-            value_type = event_dict.get('value_type', '')
-            device_id = event_dict.get('device_id', '')
-            target_devices = event_dict.get('target_devices', '')
-            device_count = event_dict.get('device_count', '')
-            total_devices = event_dict.get('total_devices', '')
-            success_count = event_dict.get('success_count', '')
-            failed_count = event_dict.get('failed_count', '')
-            topic = event_dict.get('topic', '')
-            source = event_dict.get('source', '')
             
-            # Build detailed message
-            parts = [message]
-            
-            if trace_id:
-                parts.append(f"trace_id={trace_id}")
-            if equip_tag:
-                parts.append(f"equip_tag={equip_tag}")
-            if message_id:
-                parts.append(f"message_id={message_id}")
-            if raw_value != '':
-                parts.append(f"raw_value={raw_value}")
-            if object_name:
-                parts.append(f"object={object_name}")
-            if value != '':
-                parts.append(f"value={value}")
-            if value_type:
-                parts.append(f"value_type={value_type}")
-            if device_id:
-                parts.append(f"device_id={device_id}")
-            if target_devices:
-                parts.append(f"target_devices={target_devices}")
-            if device_count:
-                parts.append(f"device_count={device_count}")
-            if total_devices:
-                parts.append(f"total_devices={total_devices}")
-            if success_count:
-                parts.append(f"success_count={success_count}")
-            if failed_count:
-                parts.append(f"failed_count={failed_count}")
-            if topic:
-                parts.append(f"topic={topic}")
-            if source:
-                parts.append(f"source={source}")
-            
-            return " ".join(parts)
+            # Only show Data sent logs in console
+            if message == "Data sent" and device_id and object_name and value != '':
+                return f"{timestamp} | INFO | Data sent | device_id={device_id} | object={object_name} | value={value}"
+            else:
+                return ""  # Don't show other logs in console
         
         structlog.configure(
             processors=[
@@ -146,7 +106,7 @@ class IoTDataBridge:
                 structlog.processors.TimeStamper(fmt="%H:%M:%S"),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                detailed_formatter
+                console_formatter
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -246,26 +206,17 @@ class IoTDataBridge:
         message_id = raw_payload.get('Message.ID', 'Unknown')
         raw_value = raw_payload.get('VALUE', 'Unknown')
         
-        # Console log - simplified
-        self.logger.info("Data received", 
-                        equip_tag=equip_tag,
-                        raw_value=raw_value)
+        # No console log - only file log
         await self.mapping_layer.map_event(event)
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
-        # Console log - simplified
-        self.logger.info("Data mapped", 
-                        object=event.object, 
-                        value=event.value)
+        # No console log - only file log
         await self.resolver_layer.resolve_event(event)
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
-        # Console log - simplified
-        self.logger.info("Routing to devices", 
-                        object=event.object, 
-                        target_devices=event.target_devices)
+        # No console log - only file log
         await self.transports_layer.send_to_devices(event)
     
     async def _log_middleware_event(self, event: MiddlewareEventLog):

@@ -140,20 +140,12 @@ class TransportsLayer(TransportsLayerInterface):
             success_count = 0
             for device_target in device_targets:
                 try:
-                    # Console log - simplified
-                    self.logger.info("Sending to device", 
-                                   device_id=device_target.device_id, 
-                                   object=device_target.object, 
-                                   value=device_target.value)
+                    # No console log - only file log
                     
                     success = await self.transport.send_to_device(device_target)
                     if success:
                         success_count += 1
-                        # Console log - simplified
-                        self.logger.info("Successfully delivered", 
-                                       device_id=device_target.device_id,
-                                       object=device_target.object,
-                                       value=device_target.value)
+                        # No console log - only file log
                         
                         # Log device ingest
                         ingest_log = DeviceIngestLog(
@@ -174,11 +166,7 @@ class TransportsLayer(TransportsLayerInterface):
                                     device_id=device_target.device_id,
                                     error=str(e))
             
-            # Console log - simplified
-            self.logger.info("Batch completed",
-                           object=event.object,
-                           success_count=success_count,
-                           total_devices=len(device_targets))
+            # No console log - only file log
             
         except Exception as e:
             self._increment_error()
