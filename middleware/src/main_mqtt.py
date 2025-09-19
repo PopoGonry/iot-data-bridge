@@ -246,30 +246,26 @@ class IoTDataBridge:
         message_id = raw_payload.get('Message.ID', 'Unknown')
         raw_value = raw_payload.get('VALUE', 'Unknown')
         
-        self.logger.info("INPUT LAYER: Raw data received", 
-                        trace_id=event.trace_id, 
+        # Console log - simplified
+        self.logger.info("Data received", 
                         equip_tag=equip_tag,
-                        message_id=message_id,
-                        raw_value=raw_value,
-                        source=event.meta.get('source', 'unknown'))
+                        raw_value=raw_value)
         await self.mapping_layer.map_event(event)
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
-        self.logger.info("MAPPING LAYER: Data parsed and mapped", 
-                        trace_id=event.trace_id, 
+        # Console log - simplified
+        self.logger.info("Data mapped", 
                         object=event.object, 
-                        value=event.value, 
-                        value_type=event.value_type.value)
+                        value=event.value)
         await self.resolver_layer.resolve_event(event)
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
-        self.logger.info("RESOLVER LAYER: Target devices identified", 
-                        trace_id=event.trace_id, 
+        # Console log - simplified
+        self.logger.info("Routing to devices", 
                         object=event.object, 
-                        target_devices=event.target_devices,
-                        device_count=len(event.target_devices))
+                        target_devices=event.target_devices)
         await self.transports_layer.send_to_devices(event)
     
     async def _log_middleware_event(self, event: MiddlewareEventLog):

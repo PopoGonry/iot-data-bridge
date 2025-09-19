@@ -140,18 +140,17 @@ class TransportsLayer(TransportsLayerInterface):
             success_count = 0
             for device_target in device_targets:
                 try:
-                    self.logger.info("TRANSPORTS LAYER: Sending data to device", 
-                                   trace_id=event.trace_id,
+                    # Console log - simplified
+                    self.logger.info("Sending to device", 
                                    device_id=device_target.device_id, 
                                    object=device_target.object, 
-                                   value=device_target.value,
-                                   topic=f'devices/{device_target.device_id.lower()}/ingress')
+                                   value=device_target.value)
                     
                     success = await self.transport.send_to_device(device_target)
                     if success:
                         success_count += 1
-                        self.logger.info("TRANSPORTS LAYER: Successfully delivered to device", 
-                                       trace_id=event.trace_id,
+                        # Console log - simplified
+                        self.logger.info("Successfully delivered", 
                                        device_id=device_target.device_id,
                                        object=device_target.object,
                                        value=device_target.value)
@@ -175,12 +174,11 @@ class TransportsLayer(TransportsLayerInterface):
                                     device_id=device_target.device_id,
                                     error=str(e))
             
-            self.logger.info("TRANSPORTS LAYER: Batch delivery completed",
-                           trace_id=event.trace_id,
+            # Console log - simplified
+            self.logger.info("Batch completed",
                            object=event.object,
-                           total_devices=len(device_targets),
                            success_count=success_count,
-                           failed_count=len(device_targets) - success_count)
+                           total_devices=len(device_targets))
             
         except Exception as e:
             self._increment_error()
