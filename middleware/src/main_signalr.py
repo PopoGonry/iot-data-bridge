@@ -26,7 +26,7 @@ from models.events import IngressEvent, MappedEvent, ResolvedEvent, MiddlewareEv
 class IoTDataBridge:
     """Main IoT Data Bridge application - SignalR only"""
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str = "config/app-signalr.yaml"):
         self.config_path = config_path
         self.config = None
         self.logger = None
@@ -58,6 +58,9 @@ class IoTDataBridge:
             # Initialize layers
             await self._initialize_layers()
             
+            # Start SignalR hub
+            self._start_signalr_hub()
+            
             self.logger.info("IoT Data Bridge (SignalR) initialized successfully")
             
         except Exception as e:
@@ -66,16 +69,9 @@ class IoTDataBridge:
     
     async def _load_config(self):
         """Load configuration from YAML file"""
-        if self.config_path:
-            # Use specified config file
-            config_file = Path(self.config_path)
-            if not config_file.exists():
-                raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        else:
-            # Use default config file
-            config_file = Path("config/app-signalr.yaml")
-            if not config_file.exists():
-                raise FileNotFoundError(f"Configuration file not found: {config_file}")
+        config_file = Path(self.config_path)
+        if not config_file.exists():
+            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
         
         with open(config_file, 'r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
@@ -84,17 +80,33 @@ class IoTDataBridge:
     
     def _setup_logging(self):
         """Setup structured logging"""
+        # Custom formatter for console logs (same as file format)
+        def console_formatter(logger, method_name, event_dict):
+            """Console formatter matching file log format"""
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            message = event_dict.get('event', '')
+            
+            # Extract key fields
+            device_id = event_dict.get('device_id', '')
+            object_name = event_dict.get('object', '')
+            value = event_dict.get('value', '')
+            
+            # Show Data sent logs in console with proper format (no timestamp - structlog will add it)
+            if message == "Data sent" and device_id and object_name and value != '':
+                return f"Data sent | device_id={device_id} | object={object_name} | value={value}"
+            else:
+                # Show other important logs normally
+                return message
+        
         structlog.configure(
             processors=[
                 structlog.stdlib.filter_by_level,
-                structlog.stdlib.add_logger_name,
                 structlog.stdlib.add_log_level,
-                structlog.stdlib.PositionalArgumentsFormatter(),
-                structlog.processors.TimeStamper(fmt="iso"),
-                structlog.processors.StackInfoRenderer(),
+                structlog.processors.TimeStamper(fmt="%H:%M:%S"),
                 structlog.processors.format_exc_info,
                 structlog.processors.UnicodeDecoder(),
-                structlog.processors.JSONRenderer()
+                console_formatter # Use the custom console formatter
             ],
             context_class=dict,
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -142,25 +154,26 @@ class IoTDataBridge:
         # Initialize input layer
         self.input_layer = InputLayer(
             self.config.input,
-            self._on_ingress_event
+            self._handle_ingress_event
         )
         
         # Initialize mapping layer
         self.mapping_layer = MappingLayer(
             self.mapping_catalog,
-            self._on_mapped_event
+            self._handle_mapped_event
         )
         
         # Initialize resolver layer
         self.resolver_layer = ResolverLayer(
             self.device_catalog,
-            self._on_resolved_event
+            self._handle_resolved_event
         )
         
         # Initialize transports layer
         self.transports_layer = TransportsLayer(
             self.config.transports,
-            self.device_catalog
+            self.device_catalog,
+            self._handle_device_ingest
         )
         
         # Initialize logging layer
@@ -170,40 +183,76 @@ class IoTDataBridge:
         
         self.logger.info("Layers initialized successfully")
     
-    async def _on_ingress_event(self, event: IngressEvent):
-        """Handle ingress event"""
+    def _start_signalr_hub(self):
+        """Start SignalR hub"""
+        import subprocess
+        import os
+        
         try:
-            # Process through mapping layer
-            await self.mapping_layer.process_event(event)
-        except Exception as e:
-            self.logger.error("Error processing ingress event", 
-                            event_uuid=event.uuid, 
-                            error=str(e))
-    
-    async def _on_mapped_event(self, event: MappedEvent):
-        """Handle mapped event"""
-        try:
-            # Process through resolver layer
-            await self.resolver_layer.process_event(event)
-        except Exception as e:
-            self.logger.error("Error processing mapped event", 
-                            event_uuid=event.uuid, 
-                            error=str(e))
-    
-    async def _on_resolved_event(self, event: ResolvedEvent):
-        """Handle resolved event"""
-        try:
-            # Process through transports layer
-            transport_events = await self.transports_layer.send_event(event)
+            # Stop any existing dotnet processes (silently ignore errors)
+            try:
+                subprocess.run(["pkill", "dotnet"], check=False, capture_output=True)
+            except:
+                pass
             
-            # Log all events
-            for transport_event in transport_events:
-                await self.logging_layer.log_transport_event(transport_event)
+            # Get the directory where signalr_hub is located
+            possible_paths = [
+                Path(self.config_path).parent / "signalr_hub",  # config/signalr_hub
+                Path("signalr_hub"),  # current directory
+                Path("../signalr_hub"),  # parent directory
+            ]
             
+            signalr_hub_dir = None
+            for path in possible_paths:
+                if path.exists():
+                    signalr_hub_dir = path
+                    break
+            
+            if not signalr_hub_dir:
+                print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
+                return
+            
+            # Start SignalR hub
+            result = subprocess.run([
+                "dotnet", "run"
+            ], cwd=str(signalr_hub_dir), capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print("SignalR hub started successfully")
+            else:
+                print(f"Failed to start SignalR hub: {result.stderr}")
+                
+        except FileNotFoundError:
+            print("Warning: dotnet not found. Please install .NET SDK or start SignalR hub manually.")
         except Exception as e:
-            self.logger.error("Error processing resolved event", 
-                            event_uuid=event.uuid, 
-                            error=str(e))
+            print(f"Error starting SignalR hub: {e}")
+    
+    def _stop_signalr_hub(self):
+        """Stop SignalR hub"""
+        import subprocess
+        try:
+            subprocess.run(["pkill", "dotnet"], check=False, capture_output=True)
+        except Exception as e:
+            pass
+    
+    async def _handle_ingress_event(self, event: IngressEvent):
+        """Handle ingress event from input layer"""
+        # No console log - only file log
+        await self.mapping_layer.map_event(event)
+    
+    async def _handle_mapped_event(self, event: MappedEvent):
+        """Handle mapped event from mapping layer"""
+        # No console log - only file log
+        await self.resolver_layer.resolve_event(event)
+    
+    async def _handle_resolved_event(self, event: ResolvedEvent):
+        """Handle resolved event from resolver layer"""
+        # No console log - only file log
+        await self.transports_layer.send_to_devices(event)
+    
+    async def _handle_device_ingest(self, event: DeviceIngestLog):
+        """Handle device ingest log"""
+        await self.logging_layer.log_device_ingest(event)
     
     async def start(self):
         """Start the IoT Data Bridge"""
@@ -211,8 +260,14 @@ class IoTDataBridge:
             self.is_running = True
             self.logger.info("Starting IoT Data Bridge (SignalR)")
             
-            # Start input layer
+            # Start all layers
             await self.input_layer.start()
+            await self.mapping_layer.start()
+            await self.resolver_layer.start()
+            await self.transports_layer.start()
+            await self.logging_layer.start()
+            
+            self.logger.info("All layers started successfully")
             
             # Keep running
             while self.is_running:
@@ -229,8 +284,20 @@ class IoTDataBridge:
         """Stop the IoT Data Bridge"""
         self.is_running = False
         
+        # Stop all layers
         if self.input_layer:
             await self.input_layer.stop()
+        if self.mapping_layer:
+            await self.mapping_layer.stop()
+        if self.resolver_layer:
+            await self.resolver_layer.stop()
+        if self.transports_layer:
+            await self.transports_layer.stop()
+        if self.logging_layer:
+            await self.logging_layer.stop()
+        
+        # Stop SignalR hub
+        self._stop_signalr_hub()
         
         self.logger.info("IoT Data Bridge (SignalR) stopped")
 

@@ -9,10 +9,11 @@ from typing import Optional, Callable, Any
 import structlog
 
 try:
-    from signalrcore import HubConnection
+    from signalrcore import HubConnectionBuilder, HubConnection
     SIGNALR_AVAILABLE = True
 except ImportError:
     SIGNALR_AVAILABLE = False
+    HubConnectionBuilder = None
     HubConnection = None
 
 from layers.base import InputLayerInterface
@@ -38,18 +39,18 @@ class SignalRInputHandler:
             
         try:
             # Build connection
-            self.connection = HubConnection(self.config.url)
-            
-            if self.config.username and self.config.password:
-                # Note: Authentication may need to be handled differently
-                # depending on the signalrcore version
-                pass
+            self.connection = HubConnectionBuilder() \
+                .with_url(self.config.url) \
+                .build()
             
             # Register message handler
             self.connection.on("ReceiveMessage", self._on_message)
             
             # Start connection
             await self.connection.start()
+            
+            # Join group
+            await self.connection.invoke("JoinGroup", self.config.group)
             
             self.is_running = True
             self.logger.info("SignalR connection started", 
@@ -64,10 +65,15 @@ class SignalRInputHandler:
         """Stop SignalR connection"""
         self.is_running = False
         if self.connection:
-            await self.connection.stop()
+            try:
+                # Leave group
+                await self.connection.invoke("LeaveGroup", self.config.group)
+                await self.connection.stop()
+            except Exception as e:
+                self.logger.error("Error stopping SignalR connection", error=str(e))
         self.logger.info("SignalR connection stopped")
     
-    async def _on_message(self, message):
+    async def _on_message(self, group: str, target: str, message: str):
         """Handle incoming SignalR message"""
         try:
             # Parse message
@@ -77,88 +83,59 @@ class SignalRInputHandler:
                 payload = message
             
             # Create ingress event
-            event = IngressEvent(
-                uuid=str(uuid.uuid4()),
-                timestamp=asyncio.get_event_loop().time(),
-                source='signalr',
-                topic=self.config.group,
-                payload=payload
+            trace_id = str(uuid.uuid4())
+            ingress_event = IngressEvent(
+                trace_id=trace_id,
+                raw=payload,
+                meta={
+                    "source": "signalr",
+                    "group": group,
+                    "target": target
+                }
             )
             
-            # Process message
-            await self._process_message(event)
-            
-            self.logger.debug("Processed SignalR message", 
-                            group=self.config.group,
-                            payload_size=len(str(payload)))
+            await self.callback(ingress_event)
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in SignalR message", error=str(e))
         except Exception as e:
             self.logger.error("Error processing SignalR message", error=str(e))
-    
-    async def _process_message(self, event: IngressEvent):
-        """Process the ingress event"""
-        try:
-            # Call the callback function
-            if self.callback:
-                await self.callback(event)
-        except Exception as e:
-            self.logger.error("Error in message processing callback", error=str(e))
 
 
 class InputLayer(InputLayerInterface):
     """Input Layer - SignalR only"""
     
-    def __init__(self, config: InputConfig, callback: Callable[[IngressEvent], None]):
-        super().__init__("signalr_input")
+    def __init__(self, config: InputConfig, mapping_layer_callback: Callable[[IngressEvent], None]):
+        super().__init__("input_layer")
         self.config = config
-        self.callback = callback
+        self.mapping_layer_callback = mapping_layer_callback
         self.handler = None
+        self._task = None
         
-        # Initialize handler based on input type
-        if self.config.type == "signalr":
-            if not self.config.signalr:
-                raise ValueError("SignalR configuration is required for SignalR input type")
-            self.handler = SignalRInputHandler(
-                self.config.signalr,
-                callback
-            )
-        else:
-            raise ValueError(f"Unsupported input type: {self.config.type}")
+        if not self.config.signalr:
+            raise ValueError("SignalR configuration is required")
+        self.handler = SignalRInputHandler(self.config.signalr, self._on_ingress_event)
     
     async def start(self):
-        """Start input layer"""
-        if self.handler:
-            await self.handler.start()
-        else:
-            raise RuntimeError("Input handler not initialized")
+        self._task = asyncio.create_task(self.handler.start())
+        self.is_running = True
     
     async def stop(self):
-        """Stop input layer"""
+        self.is_running = False
         if self.handler:
             await self.handler.stop()
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
     
     async def process_raw_data(self, raw_data: dict, meta: dict) -> Optional[Any]:
-        """Process raw input data"""
-        try:
-            # Create ingress event from raw data
-            event = IngressEvent(
-                uuid=str(uuid.uuid4()),
-                timestamp=asyncio.get_event_loop().time(),
-                source='signalr',
-                topic=meta.get('group', 'unknown'),
-                payload=raw_data
-            )
-            
-            # Call the callback function
-            if self.callback:
-                await self.callback(event)
-            
-            self._increment_processed()
-            return event
-            
-        except Exception as e:
-            self.logger.error("Error processing raw data", error=str(e))
-            self._increment_error()
-            return None
+        trace_id = str(uuid.uuid4())
+        ingress_event = IngressEvent(trace_id=trace_id, raw=raw_data, meta=meta)
+        return ingress_event
+    
+    async def _on_ingress_event(self, event: IngressEvent):
+        self._increment_processed()
+        await self.mapping_layer_callback(event)
