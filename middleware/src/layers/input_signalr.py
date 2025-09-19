@@ -40,20 +40,25 @@ class SignalRInputHandler:
             raise ImportError("SignalR library not available")
             
         try:
+            self.logger.info("Building SignalR connection", url=self.config.url)
             # Build connection
             self.connection = HubConnectionBuilder() \
                 .with_url(self.config.url) \
                 .build()
             
+            self.logger.info("Registering message handler for ingress messages")
             # Register message handler for ingress messages
             self.connection.on("ingress", self._on_message)
             
+            self.logger.info("Starting SignalR connection")
             # Start connection
             self.connection.start()
+            self.logger.info("SignalR connection started successfully")
             
+            self.logger.info("Attempting to join group", group=self.config.group)
             # Join group
             self.connection.send("JoinGroup", [self.config.group])
-            self.logger.info("Attempting to join group", group=self.config.group)
+            self.logger.info("JoinGroup command sent", group=self.config.group)
             
             self.is_running = True
             self.logger.info("SignalR connection started", 
@@ -62,6 +67,8 @@ class SignalRInputHandler:
             
         except Exception as e:
             self.logger.error("SignalR connection error", error=str(e))
+            import traceback
+            self.logger.error("SignalR connection traceback", traceback=traceback.format_exc())
             raise
     
     async def stop(self):
