@@ -2,7 +2,6 @@
 objects:
   Geo.Latitude:
     - VM-A
-    - VM-C
     
   Geo.Longitude:
     - VM-A
@@ -13,16 +12,12 @@ objects:
     
   Engine1.SpeedRpm:
     - VM-B
-    - VM-D
     
   Engine1.Temperature:
     - VM-B
-    - VM-D
     
   Environment.Humidity:
-    - VM-C
-    - VM-D
+    - VM-B
     
   Environment.Temperature:
-    - VM-C
-    - VM-D
+    - VM-B

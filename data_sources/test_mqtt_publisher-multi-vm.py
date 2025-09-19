@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """
 MQTT Test Publisher - Multi VM Setup
-Sends test data to IoT Data Bridge from external VM
+Sends random test data to IoT Data Bridge from external VM periodically
 """
 
 import asyncio
 import json
 import uuid
+import random
+import signal
 import sys
 from datetime import datetime
 from aiomqtt import Client
 
 
-async def publish_test_data(broker_host="192.168.1.100", broker_port=1883):
-    """Publish test data to MQTT broker"""
+def generate_random_test_data():
+    """Generate random test data for all objects matching the external data format"""
     
-    # Test data matching the external data format
+    # 모든 오브젝트에 대한 랜덤 데이터 생성
     test_cases = [
         {
             "name": "GPS Latitude",
@@ -30,7 +32,7 @@ async def publish_test_data(broker_host="192.168.1.100", broker_port=1883):
                 "payload": {
                     "Equip.Tag": "GPS001",
                     "Message.ID": "GLL001",
-                    "VALUE": 37.5665
+                    "VALUE": round(random.uniform(37.0, 38.0), 4)  # 서울 근처 위도 범위
                 }
             }
         },
@@ -47,7 +49,24 @@ async def publish_test_data(broker_host="192.168.1.100", broker_port=1883):
                 "payload": {
                     "Equip.Tag": "GPS001",
                     "Message.ID": "GLL002",
-                    "VALUE": 126.9780
+                    "VALUE": round(random.uniform(126.0, 127.0), 4)  # 서울 근처 경도 범위
+                }
+            }
+        },
+        {
+            "name": "GPS Altitude",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "SENSOR-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "SENSORDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "GPS001",
+                    "Message.ID": "GLL003",
+                    "VALUE": round(random.uniform(0, 1000), 2)  # 고도 0-1000m
                 }
             }
         },
@@ -64,7 +83,7 @@ async def publish_test_data(broker_host="192.168.1.100", broker_port=1883):
                 "payload": {
                     "Equip.Tag": "ENG001",
                     "Message.ID": "RPM001",
-                    "VALUE": 2500
+                    "VALUE": random.randint(1000, 6000)  # RPM 1000-6000
                 }
             }
         },
@@ -81,45 +100,111 @@ async def publish_test_data(broker_host="192.168.1.100", broker_port=1883):
                 "payload": {
                     "Equip.Tag": "ENG001",
                     "Message.ID": "TEMP001",
-                    "VALUE": 85.5
+                    "VALUE": round(random.uniform(70.0, 120.0), 1)  # 엔진 온도 70-120°C
+                }
+            }
+        },
+        {
+            "name": "Environment Humidity",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "ENV-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "ENVDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "SENSOR001",
+                    "Message.ID": "HUM001",
+                    "VALUE": round(random.uniform(30.0, 90.0), 1)  # 습도 30-90%
+                }
+            }
+        },
+        {
+            "name": "Environment Temperature",
+            "data": {
+                "header": {
+                    "UUID": str(uuid.uuid4()),
+                    "TIME": datetime.now().strftime("%Y%m%d%H%M%S"),
+                    "SRC": "ENV-GW-01",
+                    "DEST": "IoTDataBridge",
+                    "TYPE": "ENVDATA"
+                },
+                "payload": {
+                    "Equip.Tag": "SENSOR001",
+                    "Message.ID": "TEMP001",
+                    "VALUE": round(random.uniform(-10.0, 40.0), 1)  # 환경 온도 -10~40°C
                 }
             }
         }
     ]
     
-    topic = "iot/ingress"
+    return test_cases
+
+
+# 전역 변수로 실행 상태 관리
+running = True
+
+
+def signal_handler(signum, frame):
+    """Signal handler for graceful shutdown"""
+    global running
+    print("\n🛑 Shutting down data publisher...")
+    running = False
+
+
+async def publish_test_data(broker_host="192.168.1.100", broker_port=1883):
+    """Publish random test data to MQTT broker periodically"""
     
-    print(f"Connecting to MQTT broker at {broker_host}:{broker_port}")
-    print(f"Publishing to topic: {topic}")
+    topic = "iot/ingress"
+    interval = 5  # 5초마다 데이터 전송
+    
+    print(f"🚀 Starting IoT Data Publisher (Multi-VM)")
+    print(f"📡 Connecting to MQTT broker at {broker_host}:{broker_port}")
+    print(f"📤 Publishing to topic: {topic}")
+    print(f"⏰ Interval: {interval} seconds")
+    print(f"🔄 Press Ctrl+C to stop")
     print()
     
     try:
         async with Client(hostname=broker_host, port=broker_port) as client:
-            print("Connected to MQTT broker successfully!")
+            print("✅ Connected to MQTT broker successfully!")
             print()
             
-            for i, test_case in enumerate(test_cases, 1):
-                print(f"{i}. Publishing: {test_case['name']}")
-                print(f"   Data: {json.dumps(test_case['data'], indent=2)}")
+            cycle_count = 0
+            while running:
+                cycle_count += 1
+                test_cases = generate_random_test_data()
                 
-                # Publish message
-                await client.publish(
-                    topic,
-                    payload=json.dumps(test_case['data']),
-                    qos=1
-                )
+                print(f"📊 Cycle #{cycle_count} - Publishing {len(test_cases)} data points...")
                 
-                print(f"   ✓ Published successfully")
-                print()
+                for i, test_case in enumerate(test_cases, 1):
+                    if not running:
+                        break
+                        
+                    print(f"  {i}. {test_case['name']}: {test_case['data']['payload']['VALUE']}")
+                    
+                    # Publish message
+                    await client.publish(
+                        topic,
+                        payload=json.dumps(test_case['data']),
+                        qos=1
+                    )
                 
-                # Wait between messages
-                await asyncio.sleep(2)
+                if running:
+                    print(f"✅ Cycle #{cycle_count} completed successfully!")
+                    print(f"⏳ Waiting {interval} seconds for next cycle...")
+                    print("-" * 50)
+                    
+                    # Wait for next cycle
+                    await asyncio.sleep(interval)
             
-            print("All test data published successfully!")
+            print("🏁 Data publisher stopped.")
             
     except Exception as e:
-        print(f"Error: {e}")
-        print(f"Make sure MQTT broker is running on {broker_host}:{broker_port}")
+        print(f"❌ Error: {e}")
+        print(f"💡 Make sure MQTT broker is running on {broker_host}:{broker_port}")
 
 
 async def main():
@@ -135,4 +220,15 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Signal handler 등록
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n🛑 Interrupted by user")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+    finally:
+        print("👋 Goodbye!")
