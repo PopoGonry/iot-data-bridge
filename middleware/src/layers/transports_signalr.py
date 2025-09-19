@@ -9,10 +9,11 @@ from typing import Optional, Callable, List, Any
 import structlog
 
 try:
-    from signalrcore import HubConnection
+    from signalrcore import HubConnectionBuilder, HubConnection
     SIGNALR_AVAILABLE = True
 except ImportError:
     SIGNALR_AVAILABLE = False
+    HubConnectionBuilder = None
     HubConnection = None
 
 from layers.base import TransportsLayerInterface
@@ -33,17 +34,15 @@ class SignalRTransport:
         """Send data to device via SignalR"""
         try:
             if not self.connection:
-                self.connection = HubConnection(self.config.url)
-                
-                if self.config.username and self.config.password:
-                    # Note: Authentication may need to be handled differently
-                    # depending on the signalrcore version
-                    pass
+                self.connection = HubConnectionBuilder() \
+                    .with_url(self.config.url) \
+                    .build()
                 await self.connection.start()
             
             # Get device-specific configuration
             device_config = device_target.transport_config.config
             group = device_config.get('group', device_target.device_id)
+            target = device_config.get('target', 'ingress')
             
             # Prepare payload
             payload = {
@@ -53,13 +52,7 @@ class SignalRTransport:
             }
             
             # Send message to device group
-            await self.connection.invoke("SendToGroup", group, json.dumps(payload))
-            
-            self.logger.debug("Sent SignalR message to device",
-                            device_id=device_target.device_id,
-                            group=group,
-                            object=device_target.object,
-                            value=device_target.value)
+            await self.connection.invoke("SendMessage", group, target, json.dumps(payload))
             
             return True
             
@@ -73,108 +66,61 @@ class SignalRTransport:
 class TransportsLayer(TransportsLayerInterface):
     """Transports Layer - SignalR only"""
     
-    def __init__(self, config: TransportsConfig, device_catalog: DeviceCatalog):
-        super().__init__("signalr_transports")
+    def __init__(self, config: TransportsConfig, device_catalog: DeviceCatalog, device_ingest_callback: Callable[[DeviceIngestLog], None]):
+        super().__init__("transports_layer")
         self.config = config
         self.device_catalog = device_catalog
-        self.transport_handler = None
+        self.device_ingest_callback = device_ingest_callback
+        self.transport = None
+        self.is_running = False
         
-        # Initialize transport handler based on transport type
-        if self.config.type == "signalr":
-            if not self.config.signalr:
-                raise ValueError("SignalR configuration is required for SignalR transport type")
-            self.transport_handler = SignalRTransport(self.config.signalr)
-        else:
-            raise ValueError(f"Unsupported transport type: {self.config.type}")
+        if not self.config.signalr:
+            raise ValueError("SignalR configuration is required")
+        self.transport = SignalRTransport(self.config.signalr)
     
     async def start(self) -> None:
-        """Start transports layer"""
         self.is_running = True
-        self.logger.info("Transports layer started")
+        self.logger.info("Starting SignalR transports layer")
     
     async def stop(self) -> None:
-        """Stop transports layer"""
         self.is_running = False
-        self.logger.info("Transports layer stopped")
+        self.logger.info("Stopping SignalR transports layer")
     
-    async def send_to_devices(self, event: Any) -> LayerResult:
-        """Send event to target devices"""
-        try:
-            if not isinstance(event, ResolvedEvent):
-                raise ValueError(f"Expected ResolvedEvent, got {type(event)}")
-            
-            transport_events = await self.send_event(event)
-            
-            successful_count = sum(1 for e in transport_events if e.success)
-            total_count = len(transport_events)
-            
-            return LayerResult(
-                success=successful_count > 0,
-                processed_count=total_count,
-                error_count=total_count - successful_count,
-                data=transport_events
+    async def send_to_devices(self, event: ResolvedEvent) -> LayerResult:
+        self._increment_processed()
+        device_targets = []
+        for device_id in event.target_devices:
+            transport_config = TransportConfig(
+                type=TransportType.SIGNALR,
+                config={'group': device_id, 'target': 'ingress'}
             )
-            
-        except Exception as e:
-            self.logger.error("Error in send_to_devices", error=str(e))
-            self._increment_error()
-            return LayerResult(
-                success=False,
-                processed_count=0,
-                error_count=1,
-                data=None
-            )
-    
-    async def send_event(self, resolved_event: ResolvedEvent) -> List[TransportEvent]:
-        """Send resolved event to target devices"""
-        transport_events = []
+            device_target = DeviceTarget(device_id=device_id, transport_config=transport_config, object=event.object, value=event.value)
+            device_targets.append(device_target)
         
-        try:
-            # Get target devices for each object
-            for object_name, value in resolved_event.mapped_data.items():
-                target_devices = self.device_catalog.get_devices_for_object(object_name)
-                
-                for device_id in target_devices:
-                    # Create device target
-                    device_target = DeviceTarget(
-                        device_id=device_id,
-                        object=object_name,
-                        value=value,
-                        transport_config=self.device_catalog.get_device_transport_config(device_id)
-                    )
-                    
-                    # Send to device
-                    success = await self.transport_handler.send_to_device(device_target)
-                    
-                    # Create transport event
-                    transport_event = TransportEvent(
-                        uuid=str(uuid.uuid4()),
-                        timestamp=asyncio.get_event_loop().time(),
-                        resolved_event_uuid=resolved_event.uuid,
-                        device_target=device_target,
-                        success=success
-                    )
-                    
-                    transport_events.append(transport_event)
+        success_count = 0
+        for device_target in device_targets:
+            try:
+                success = await self.transport.send_to_device(device_target)
+                if success:
+                    success_count += 1
                     
                     # Log device ingest
-                    if success:
-                        device_log = DeviceIngestLog(
-                            device_id=device_id,
-                            object=object_name,
-                            value=value,
-                            timestamp=asyncio.get_event_loop().time()
-                        )
-                        self.logger.info("Device data ingested", 
-                                       device_id=device_id,
-                                       object=object_name,
-                                       value=value)
-            
-            self.logger.info("Transport events processed",
-                           total_events=len(transport_events),
-                           successful=sum(1 for e in transport_events if e.success))
-            
-        except Exception as e:
-            self.logger.error("Error in transport layer", error=str(e))
+                    ingest_log = DeviceIngestLog(
+                        trace_id=event.trace_id,
+                        device_id=device_target.device_id,
+                        object=device_target.object,
+                        value=device_target.value
+                    )
+                    await self.device_ingest_callback(ingest_log)
+                else:
+                    self.logger.warning("TRANSPORTS LAYER: Failed to deliver to device", 
+                                      trace_id=event.trace_id,
+                                      device_id=device_target.device_id)
+                    
+            except Exception as e:
+                self.logger.error("TRANSPORTS LAYER: Error delivering to device",
+                                trace_id=event.trace_id,
+                                device_id=device_target.device_id,
+                                error=str(e))
         
-        return transport_events
+        return LayerResult(success=success_count > 0, processed_count=len(device_targets), error_count=len(device_targets) - success_count, data=device_targets)

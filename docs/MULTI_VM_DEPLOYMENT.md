@@ -49,11 +49,17 @@ scp -r data-sources/ user@192.168.32.103:/opt/data-sources/
 cd /opt/data-sources
 pip install -r requirements.txt
 
-# 3. 데이터 전송
+# 3. 데이터 전송 (MQTT 버전)
 python mqtt_publisher.py 192.168.32.102 1883
 
-# 또는 start.sh 스크립트 사용
-./start.sh
+# 또는 start-mqtt.sh 스크립트 사용
+./start-mqtt.sh
+
+# 3. 데이터 전송 (SignalR 버전)
+python signalr_publisher.py http://192.168.32.102:5000/hub iot_clients
+
+# 또는 start-signalr.sh 스크립트 사용
+./start-signalr.sh
 ```
 
 ### **3. VM-3~4 (IoT Device) 설정**
@@ -66,14 +72,23 @@ scp -r devices/ user@192.168.32.104:/opt/iot-device/
 cd /opt/iot-device
 pip install -r requirements.txt
 
-# 3. Device 실행 (명령행 인수 사용)
+# 3. Device 실행 (MQTT 버전)
 python device.py VM-A 192.168.32.102 1883
 
-# 또는 start.sh 스크립트 사용
-./start.sh
+# 또는 start-mqtt.sh 스크립트 사용
+./start-mqtt.sh
 # Enter Device ID (default: VM-A): VM-A
 # Enter MQTT broker host (default: localhost): 192.168.32.102
 # Enter MQTT broker port (default: 1883): 1883
+
+# 3. Device 실행 (SignalR 버전)
+python signalr_device.py VM-A http://192.168.32.102:5000/hub VM-A
+
+# 또는 start-signalr.sh 스크립트 사용
+./start-signalr.sh
+# Enter Device ID (default: VM-A): VM-A
+# Enter SignalR hub URL (default: http://localhost:5000/hub): http://192.168.32.102:5000/hub
+# Enter Group name (default: VM-A): VM-A
 ```
 
 ## ⚙️ 설정 파일 수정

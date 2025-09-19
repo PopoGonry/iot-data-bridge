@@ -7,24 +7,40 @@
 ```
 data-sources/
 ├── mqtt_publisher.py              # MQTT 데이터 발행기
+├── signalr_publisher.py           # SignalR 데이터 발행기
 ├── data_generator.py              # 외부 데이터 생성기
-├── start.bat                      # Windows 실행 스크립트
-├── start.sh                       # Linux/macOS 실행 스크립트
+├── start-mqtt.bat                 # MQTT Windows 실행 스크립트
+├── start-mqtt.sh                  # MQTT Linux/macOS 실행 스크립트
+├── start-signalr.bat              # SignalR Windows 실행 스크립트
+├── start-signalr.sh               # SignalR Linux/macOS 실행 스크립트
 └── requirements.txt               # 프로젝트 의존성
 ```
 
 ## 🚀 사용 방법
 
 ### **간편 실행 (추천)**
+
+#### **MQTT 버전**
 ```bash
 # Windows
-start.bat
+start-mqtt.bat
 
 # Linux/macOS
-./start.sh
+./start-mqtt.sh
+```
+
+#### **SignalR 버전**
+```bash
+# Windows
+start-signalr.bat
+
+# Linux/macOS
+./start-signalr.sh
 ```
 
 ### **직접 실행**
+
+#### **MQTT 버전**
 ```bash
 # MQTT로 데이터 전송 (5초마다 랜덤 데이터)
 # 사용법: python mqtt_publisher.py <broker_host> <broker_port>
@@ -40,6 +56,24 @@ python mqtt_publisher.py
 # Usage Examples:
 #    Local:    python3 mqtt_publisher.py localhost 1883
 #    Remote:   python3 mqtt_publisher.py 192.168.1.100 1883
+```
+
+#### **SignalR 버전**
+```bash
+# SignalR로 데이터 전송 (5초마다 랜덤 데이터)
+# 사용법: python signalr_publisher.py <hub_url> [group_name]
+
+# 로컬 환경
+python signalr_publisher.py http://localhost:5000/hub iot_clients
+
+# 원격 환경 (middleware 서버)
+python signalr_publisher.py http://192.168.32.102:5000/hub iot_clients
+
+# 명령행 인수 필수 (없으면 사용법 안내 표시)
+python signalr_publisher.py
+# Usage Examples:
+#    Local:    python3 signalr_publisher.py http://localhost:5000/hub iot_clients
+#    Remote:   python3 signalr_publisher.py http://192.168.1.100:5000/hub iot_clients
 ```
 
 ### **데이터 생성**
