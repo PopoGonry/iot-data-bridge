@@ -49,10 +49,10 @@ class SignalRInputHandler:
             self.connection.on("ReceiveMessage", self._on_message)
             
             # Start connection
-            await self.connection.start()
+            self.connection.start()
             
             # Join group
-            await self.connection.invoke("JoinGroup", self.config.group)
+            self.connection.invoke("JoinGroup", self.config.group)
             
             self.is_running = True
             self.logger.info("SignalR connection started", 
@@ -69,8 +69,8 @@ class SignalRInputHandler:
         if self.connection:
             try:
                 # Leave group
-                await self.connection.invoke("LeaveGroup", self.config.group)
-                await self.connection.stop()
+                self.connection.invoke("LeaveGroup", self.config.group)
+                self.connection.stop()
             except Exception as e:
                 self.logger.error("Error stopping SignalR connection", error=str(e))
         self.logger.info("SignalR connection stopped")

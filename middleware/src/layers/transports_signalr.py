@@ -40,7 +40,7 @@ class SignalRTransport:
                 self.connection = HubConnectionBuilder() \
                     .with_url(self.config.url) \
                     .build()
-                await self.connection.start()
+                self.connection.start()
             
             # Get device-specific configuration
             device_config = device_target.transport_config.config
@@ -55,7 +55,7 @@ class SignalRTransport:
             }
             
             # Send message to device group
-            await self.connection.invoke("SendMessage", group, target, json.dumps(payload))
+            self.connection.invoke("SendMessage", group, target, json.dumps(payload))
             
             return True
             

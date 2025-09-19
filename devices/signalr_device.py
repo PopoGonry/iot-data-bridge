@@ -58,11 +58,11 @@ class IoTDevice:
         
         try:
             # Connect to SignalR hub
-            await self.connection.start()
+            self.connection.start()
             self.logger.info("Connected to SignalR hub", device_id=self.device_id)
             
             # Join device group
-            await self.connection.invoke("JoinGroup", group)
+            self.connection.invoke("JoinGroup", group)
             self.logger.info("Joined group", device_id=self.device_id, group=group)
             
             self.is_running = True
@@ -86,10 +86,10 @@ class IoTDevice:
                 # Leave group
                 signalr_config = self.config.get('signalr', {})
                 group = signalr_config.get('group', self.device_id)
-                await self.connection.invoke("LeaveGroup", group)
+                self.connection.invoke("LeaveGroup", group)
                 
                 # Disconnect
-                await self.connection.stop()
+                self.connection.stop()
                 self.logger.info("Disconnected from SignalR hub", device_id=self.device_id)
             except Exception as e:
                 self.logger.error("Error stopping device", 

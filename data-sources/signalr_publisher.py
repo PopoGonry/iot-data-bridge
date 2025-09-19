@@ -183,12 +183,12 @@ async def publish_test_data(hub_url, group_name):
             .build()
         
         # 연결 시작
-        await connection.start()
+        connection.start()
         print("Connected to SignalR hub successfully!")
         print()
         
         # 그룹에 참여
-        await connection.invoke("JoinGroup", group_name)
+        connection.invoke("JoinGroup", group_name)
         print(f"Joined group: {group_name}")
         print()
         
@@ -206,7 +206,7 @@ async def publish_test_data(hub_url, group_name):
                 print(f"  {i}. {test_case['name']}: {test_case['data']['payload']['VALUE']}")
                 
                 # SignalR로 메시지 전송
-                await connection.invoke("SendMessage", group_name, "ingress", json.dumps(test_case['data']))
+                connection.invoke("SendMessage", group_name, "ingress", json.dumps(test_case['data']))
             
             if running:
                 print(f"Cycle #{cycle_count} completed successfully!")
@@ -217,8 +217,8 @@ async def publish_test_data(hub_url, group_name):
                 await asyncio.sleep(interval)
         
         # 그룹에서 나가기
-        await connection.invoke("LeaveGroup", group_name)
-        await connection.stop()
+        connection.invoke("LeaveGroup", group_name)
+        connection.stop()
         print("Data publisher stopped.")
         
     except Exception as e:
