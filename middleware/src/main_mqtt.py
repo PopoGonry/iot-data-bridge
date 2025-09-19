@@ -274,7 +274,7 @@ class IoTDataBridge:
                 "mosquitto", 
                 "-c", str(mosquitto_conf), 
                 "-d"
-            ], cwd=str(config_dir), capture_output=True, text=True)
+            ], cwd=str(mosquitto_conf.parent), capture_output=True, text=True)
             
             if result.returncode == 0:
                 print("MQTT broker started successfully")
