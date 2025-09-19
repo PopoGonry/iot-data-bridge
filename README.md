@@ -14,20 +14,35 @@
 
 ```
 iot-data-bridge/
-├── data_sources/            # 외부 데이터 소스
-│   ├── test_mqtt_publisher.py
-│   ├── test_mqtt_subscriber.py
-│   └── test_data.py
-├── middleware/              # IoT Data Bridge 미들웨어
+├── data-sources/            # 외부 데이터 소스 (독립 프로젝트)
+│   ├── mqtt_publisher.py           # MQTT 데이터 발행기
+│   ├── data_generator.py           # 외부 데이터 생성기
+│   ├── start.bat                   # Windows 실행 스크립트
+│   ├── start.sh                    # Linux/macOS 실행 스크립트
+│   ├── requirements.txt            # 프로젝트 의존성
+│   └── README.md                   # 사용법 문서
+├── middleware/              # IoT Data Bridge 미들웨어 (독립 프로젝트)
 │   ├── src/                # 소스 코드
 │   ├── config/             # 설정 파일
+│   │   ├── app.yaml                # 메인 설정 파일
+│   │   ├── devices.yaml            # 디바이스 매핑
+│   │   └── mappings.yaml           # 데이터 매핑
 │   ├── signalr_hub/        # SignalR Hub
 │   ├── mosquitto.conf      # MQTT 브로커 설정
-│   └── test_full_system.py # 전체 시스템 테스트
-├── devices/                 # IoT Device
+│   ├── start.bat           # Windows 실행 스크립트
+│   ├── start.sh            # Linux/macOS 실행 스크립트
+│   ├── test_config.py      # 설정 테스트
+│   ├── test_full_system.py # 전체 시스템 테스트
+│   ├── requirements.txt    # 프로젝트 의존성
+│   └── README.md           # 사용법 문서
+├── devices/                 # IoT Device (독립 프로젝트)
 │   ├── device.py           # Device 실행 파일
-│   └── device_config.yaml  # Device 설정 템플릿
-└── docs/                   # 문서
+│   ├── device_config.yaml  # Device 설정 파일
+│   ├── start.bat           # Windows 실행 스크립트
+│   ├── start.sh            # Linux/macOS 실행 스크립트
+│   ├── requirements.txt    # 프로젝트 의존성
+│   └── README.md           # 사용법 문서
+└── docs/                   # 프로젝트 문서
     ├── requirements_and_decisions.md
     └── LAYER_DTO_FLOW.md
 ```
@@ -37,28 +52,58 @@ iot-data-bridge/
 ### 1. 의존성 설치
 
 ```bash
-pip install -r requirements.txt
+# 각 프로젝트별로 의존성 설치
+cd data-sources && pip install -r requirements.txt
+cd ../middleware && pip install -r requirements.txt  
+cd ../devices && pip install -r requirements.txt
 ```
 
-### 2. 전체 시스템 테스트
+### 2. 간편 실행
+
+```bash
+# 각 프로젝트별로 실행 스크립트 사용
+cd data-sources && start.bat    # Windows
+cd data-sources && ./start.sh   # Linux/macOS
+
+cd middleware && start.bat      # Windows  
+cd middleware && ./start.sh     # Linux/macOS
+
+cd devices && start.bat         # Windows
+cd devices && ./start.sh        # Linux/macOS
+```
+
+### 3. 설정 파일 수정 (필요시)
+
+```bash
+# 미들웨어 설정 (필요시 IP 주소 수정)
+# middleware/config/app.yaml 파일에서 IP 주소 수정
+
+# 디바이스 설정 (각 VM에서)
+# devices/device_config.yaml 파일에서 device_id와 MQTT host 수정
+```
+
+### 4. 전체 시스템 테스트
 
 ```bash
 # 미들웨어 디렉토리에서
 cd middleware
 python test_full_system.py
 
-# 별도 터미널에서 데이터 전송
-cd ../data_sources
-python test_mqtt_publisher.py
+# 별도 터미널에서 데이터 전송 (5초마다 랜덤 데이터)
+cd ../data-sources
+python mqtt_publisher.py localhost 1883
 ```
 
-### 3. Device 실행
+### 5. Device 실행
 
 ```bash
-# 각 VM에서 Device 실행
+# 각 VM에서 Device 실행 (기본 config 사용)
 cd devices
 python device.py VM-A
 python device.py VM-B
+
+# 또는 특정 config 파일 사용
+python device.py VM-A device_config.yaml
 ```
 
 ## ⚙️ 설정

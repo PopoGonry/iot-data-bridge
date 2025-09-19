@@ -20,10 +20,22 @@ middleware/
 ├── mosquitto.conf          # MQTT 브로커 설정
 ├── mosquitto_data/         # MQTT 데이터 디렉토리
 ├── logs/                   # 로그 파일
+├── start.bat               # Windows 실행 스크립트
+├── start.sh                # Linux/macOS 실행 스크립트
+├── requirements.txt        # 프로젝트 의존성
 └── test_full_system.py     # 전체 시스템 테스트
 ```
 
 ## 🚀 실행 방법
+
+### **간편 실행 (추천)**
+```bash
+# Windows
+start.bat
+
+# Linux/macOS
+./start.sh
+```
 
 ### **전체 시스템 테스트**
 ```bash

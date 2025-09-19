@@ -124,7 +124,7 @@ async def main():
     
     # Check if second argument is a config file or mqtt_host
     if len(sys.argv) > 2 and sys.argv[2].endswith('.yaml'):
-        # Load from config file
+        # Load from specified config file
         config_path = sys.argv[2]
         config_file = Path(config_path)
         
@@ -139,30 +139,45 @@ async def main():
         print(f"Loaded configuration from {config_path}")
         
     else:
-        # Use command line arguments
-        mqtt_host = sys.argv[2] if len(sys.argv) > 2 else "localhost"
-        mqtt_port = int(sys.argv[3]) if len(sys.argv) > 3 else 1883
-        
-        device_config = {
-            'mqtt': {
-                'host': mqtt_host,
-                'port': mqtt_port,
-                'topic': f'devices/{device_id.lower()}/ingress',
-                'qos': 1,
-                'keepalive': 60
+        # Try to load from default config file
+        default_config = Path("device_config.yaml")
+        if default_config.exists():
+            with open(default_config, 'r', encoding='utf-8') as f:
+                config_data = yaml.safe_load(f)
+            device_config = config_data
+            print(f"Loaded configuration from: {default_config}")
+        else:
+            # Use command line arguments
+            mqtt_host = sys.argv[2] if len(sys.argv) > 2 else "localhost"
+            mqtt_port = int(sys.argv[3]) if len(sys.argv) > 3 else 1883
+            
+            device_config = {
+                'mqtt': {
+                    'host': mqtt_host,
+                    'port': mqtt_port,
+                    'topic': f'devices/{device_id.lower()}/ingress',
+                    'qos': 1,
+                    'keepalive': 60
+                }
             }
-        }
-        print(f"Using command line configuration")
+            print(f"Using command line configuration")
     
     # Override device_id in config
     device_config['device_id'] = device_id
     
-    # Ensure topic is set correctly
+    # Ensure topic is set correctly and replace placeholders
     if 'mqtt' not in device_config:
         device_config['mqtt'] = {}
     
     if 'topic' not in device_config['mqtt']:
         device_config['mqtt']['topic'] = f'devices/{device_id.lower()}/ingress'
+    else:
+        # Replace {device_id} placeholder in topic
+        device_config['mqtt']['topic'] = device_config['mqtt']['topic'].format(device_id=device_id.lower())
+    
+    # Replace placeholders in signalr group if exists
+    if 'signalr' in device_config and 'group' in device_config['signalr']:
+        device_config['signalr']['group'] = device_config['signalr']['group'].format(device_id=device_id.lower())
     
     print(f"Device {device_id} configuration:")
     print(f"  - MQTT Host: {device_config['mqtt'].get('host', 'localhost')}:{device_config['mqtt'].get('port', 1883)}")

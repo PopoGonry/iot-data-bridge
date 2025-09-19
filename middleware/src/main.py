@@ -26,7 +26,7 @@ from src.models.events import IngressEvent, MappedEvent, ResolvedEvent, Middlewa
 class IoTDataBridge:
     """Main IoT Data Bridge application"""
     
-    def __init__(self, config_path: str = "middleware/config/app.yaml"):
+    def __init__(self, config_path: str = None):
         self.config_path = config_path
         self.config = None
         self.logger = None
@@ -66,14 +66,22 @@ class IoTDataBridge:
     
     async def _load_config(self):
         """Load configuration from YAML file"""
-        config_file = Path(self.config_path)
-        if not config_file.exists():
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+        if self.config_path:
+            # Use specified config file
+            config_file = Path(self.config_path)
+            if not config_file.exists():
+                raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+        else:
+            # Use default config file
+            config_file = Path("middleware/config/app.yaml")
+            if not config_file.exists():
+                raise FileNotFoundError(f"Configuration file not found: {config_file}")
         
         with open(config_file, 'r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
         
         self.config = AppConfig(**config_data)
+        print(f"Loaded configuration from: {config_file}")
     
     def _setup_logging(self):
         """Setup structured logging"""

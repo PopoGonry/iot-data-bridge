@@ -11,16 +11,29 @@ def test_config_files():
     """Test configuration files"""
     print("Testing configuration files...")
     
-    # Test app.yaml
-    try:
-        with open("config/app.yaml", 'r', encoding='utf-8') as f:
-            app_config = yaml.safe_load(f)
-        print("✓ app.yaml loaded successfully")
+    # Test app config
+    config_files = ["config/app.yaml"]
+    app_config = None
+    config_file_used = None
+    
+    for config_file in config_files:
+        if Path(config_file).exists():
+            try:
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    app_config = yaml.safe_load(f)
+                config_file_used = config_file
+                break
+            except Exception as e:
+                print(f"✗ {config_file} error: {e}")
+                continue
+    
+    if app_config:
+        print(f"✓ {config_file_used} loaded successfully")
         print(f"  - App name: {app_config.get('app_name')}")
         print(f"  - Mapping catalog: {app_config.get('mapping_catalog_path')}")
         print(f"  - Device catalog: {app_config.get('device_catalog_path')}")
-    except Exception as e:
-        print(f"✗ app.yaml error: {e}")
+    else:
+        print("✗ No app config file found")
         return False
     
     # Test mappings.yaml

@@ -6,20 +6,30 @@ IoT Data Bridge에서 전송된 데이터를 수신하고 처리하는 Device입
 
 ```
 devices/
-├── device.py               # Device 실행 파일
-├── device_config.yaml      # Device 설정 템플릿
-└── README.md              # 이 파일
+├── device.py                      # Device 실행 파일
+├── device_config.yaml             # Device 설정 파일
+├── start.bat                      # Windows 실행 스크립트
+├── start.sh                       # Linux/macOS 실행 스크립트
+├── requirements.txt               # 프로젝트 의존성
+└── README.md                     # 이 파일
 ```
 
 ## 🚀 실행 방법
 
-### **기본 실행**
+### **간편 실행 (추천)**
 ```bash
-# Device ID만 지정 (기본 설정 사용)
+# Windows
+start.bat
+
+# Linux/macOS
+./start.sh
+```
+
+### **기본 실행 (기본 config 사용)**
+```bash
+# Device ID만 지정 (device_config.yaml 자동 사용)
 python device.py VM-A
 python device.py VM-B
-python device.py VM-C
-python device.py VM-D
 ```
 
 ### **MQTT 호스트/포트 지정**
@@ -77,12 +87,6 @@ python device.py VM-A
 
 # VM-B에서  
 python device.py VM-B
-
-# VM-C에서
-python device.py VM-C
-
-# VM-D에서
-python device.py VM-D
 ```
 
 ### **설정 파일 커스터마이징**
