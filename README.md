@@ -23,17 +23,25 @@ iot-data-bridge/
 │   └── README.md                   # 사용법 문서
 ├── middleware/              # IoT Data Bridge 미들웨어 (독립 프로젝트)
 │   ├── src/                # 소스 코드
+│   │   ├── main_mqtt.py           # MQTT 전용 메인
+│   │   ├── main_signalr.py        # SignalR 전용 메인
+│   │   └── layers/                # 레이어 구현
 │   ├── config/             # 설정 파일
-│   │   ├── app.yaml                # 메인 설정 파일
-│   │   ├── devices.yaml            # 디바이스 매핑
-│   │   └── mappings.yaml           # 데이터 매핑
+│   │   ├── app-mqtt.yaml          # MQTT 전용 설정
+│   │   ├── app-signalr.yaml       # SignalR 전용 설정
+│   │   ├── devices.yaml           # 디바이스 매핑
+│   │   └── mappings.yaml          # 데이터 매핑
 │   ├── signalr_hub/        # SignalR Hub
 │   ├── mosquitto.conf      # MQTT 브로커 설정
-│   ├── start.bat           # Windows 실행 스크립트
-│   ├── start.sh            # Linux/macOS 실행 스크립트
+│   ├── start-mqtt.bat      # MQTT Windows 실행 스크립트
+│   ├── start-mqtt.sh       # MQTT Linux/macOS 실행 스크립트
+│   ├── start-signalr.bat   # SignalR Windows 실행 스크립트
+│   ├── start-signalr.sh    # SignalR Linux/macOS 실행 스크립트
 │   ├── test_config.py      # 설정 테스트
 │   ├── test_full_system.py # 전체 시스템 테스트
-│   ├── requirements.txt    # 프로젝트 의존성
+│   ├── requirements.txt    # 전체 의존성
+│   ├── requirements-mqtt.txt    # MQTT 전용 의존성
+│   ├── requirements-signalr.txt # SignalR 전용 의존성
 │   └── README.md           # 사용법 문서
 ├── devices/                 # IoT Device (독립 프로젝트)
 │   ├── device.py           # Device 실행 파일
@@ -61,13 +69,19 @@ cd ../devices && pip install -r requirements.txt
 ### 2. 간편 실행
 
 ```bash
-# 각 프로젝트별로 실행 스크립트 사용
+# Data Sources
 cd data-sources && start.bat    # Windows
 cd data-sources && ./start.sh   # Linux/macOS
 
-cd middleware && start.bat      # Windows  
-cd middleware && ./start.sh     # Linux/macOS
+# Middleware - MQTT 버전
+cd middleware && start-mqtt.bat      # Windows  
+cd middleware && ./start-mqtt.sh     # Linux/macOS
 
+# Middleware - SignalR 버전
+cd middleware && start-signalr.bat   # Windows
+cd middleware && ./start-signalr.sh  # Linux/macOS
+
+# Devices
 cd devices && start.bat         # Windows
 cd devices && ./start.sh        # Linux/macOS
 ```
@@ -76,7 +90,8 @@ cd devices && ./start.sh        # Linux/macOS
 
 ```bash
 # 미들웨어 설정 (필요시 IP 주소 수정)
-# middleware/config/app.yaml 파일에서 IP 주소 수정
+# middleware/config/app-mqtt.yaml 파일에서 MQTT IP 주소 수정
+# middleware/config/app-signalr.yaml 파일에서 SignalR IP 주소 수정
 
 # 디바이스 설정 (각 VM에서)
 # devices/device_config.yaml 파일에서 device_id와 MQTT host 수정

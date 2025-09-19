@@ -1,0 +1,30 @@
+# IoT Data Bridge Main Configuration - SignalR Only
+
+app_name: "IoT Data Bridge (SignalR)"
+mapping_catalog_path: "config/mappings.yaml"
+device_catalog_path: "config/devices.yaml"
+
+# Input Layer Configuration - SignalR Only
+input:
+  type: "signalr"
+  signalr:
+    url: "http://localhost:5000/hub"  # 로컬 개발: localhost, 멀티 VM: 192.168.1.100
+    group: "iot_clients"
+    username: null
+    password: null
+
+# Transports Layer Configuration - SignalR Only
+transports:
+  type: "signalr"
+  signalr:
+    url: "http://localhost:5000/hub"  # 로컬 개발: localhost, 멀티 VM: 192.168.1.100
+    group: "iot_devices"
+    username: null
+    password: null
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "logs/iot_data_bridge_signalr.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5

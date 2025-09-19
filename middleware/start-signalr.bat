@@ -1,11 +1,11 @@
 @echo off
-REM Middleware Start Script for Windows
+REM Middleware Start Script for Windows - SignalR Only
 
 REM Change to the directory where this script is located
 cd /d "%~dp0"
 
 echo ========================================
-echo    IoT Data Bridge - Middleware
+echo    IoT Data Bridge - Middleware (SignalR)
 echo ========================================
 echo.
 
@@ -20,7 +20,7 @@ if %ERRORLEVEL% neq 0 (
 
 REM Check if requirements are installed
 echo Checking dependencies...
-pip show aiomqtt >nul 2>&1
+pip show signalrcore >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo Installing dependencies...
     pip install -r requirements.txt
@@ -32,11 +32,11 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-echo Starting IoT Data Bridge Middleware...
+echo Starting IoT Data Bridge Middleware (SignalR)...
 echo.
 
 REM Start the middleware
-python src/main.py
+python src/main_signalr.py
 
 echo.
 echo Middleware stopped.

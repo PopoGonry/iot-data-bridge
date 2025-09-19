@@ -1,12 +1,12 @@
 #!/bin/bash
-# Middleware Start Script for Linux/macOS
+# Middleware Start Script for Linux/macOS - SignalR Only
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "========================================"
-echo "   IoT Data Bridge - Middleware"
+echo "   IoT Data Bridge - Middleware (SignalR)"
 echo "========================================"
 echo
 
@@ -19,7 +19,7 @@ fi
 
 # Check if requirements are installed
 echo "Checking dependencies..."
-if ! python3 -c "import aiomqtt" &> /dev/null; then
+if ! python3 -c "import signalrcore" &> /dev/null; then
     echo "Installing dependencies..."
     pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
@@ -29,11 +29,11 @@ if ! python3 -c "import aiomqtt" &> /dev/null; then
 fi
 
 echo
-echo "Starting IoT Data Bridge Middleware..."
+echo "Starting IoT Data Bridge Middleware (SignalR)..."
 echo
 
 # Start the middleware
-python3 src/main.py
+python3 src/main_signalr.py
 
 echo
 echo "Middleware stopped."
