@@ -24,7 +24,8 @@ app.MapHub<IoTHub>("/hub");
 
 app.MapGet("/", () => "IoT Data Bridge SignalR Hub is running!");
 
-app.Run();
+// Configure to listen on all interfaces (0.0.0.0) instead of just localhost
+app.Run("http://0.0.0.0:5000");
 
 public class IoTHub : Hub
 {
