@@ -53,8 +53,13 @@ class IoTDevice:
             .with_url(url) \
             .build()
         
-        # Register message handler
-        self.connection.on("ReceiveMessage", self._on_message_received)
+        # Register message handler for ingress messages
+        self.connection.on("ingress", self._on_message_received)
+        
+        # Add event handlers to prevent undefined errors
+        self.connection.on_open(lambda: self.logger.debug("SignalR connection opened", device_id=self.device_id))
+        self.connection.on_close(lambda: self.logger.debug("SignalR connection closed", device_id=self.device_id))
+        self.connection.on_error(lambda data: self.logger.error("SignalR connection error", device_id=self.device_id, error=data))
         
         try:
             # Connect to SignalR hub
