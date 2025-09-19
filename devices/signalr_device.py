@@ -138,7 +138,17 @@ class IoTDevice:
             # Log received data in the requested format
             from datetime import datetime
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"{timestamp} | INFO | Data received | device_id={self.device_id} | object={object_name} | value={value}")
+            log_message = f"{timestamp} | INFO | Data received | device_id={self.device_id} | object={object_name} | value={value}"
+            
+            # Print to console
+            print(log_message)
+            
+            # Write to log file
+            log_file = Path("logs") / f"device_{self.device_id}.log"
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(log_message + '\n')
+                f.flush()
             
             # Store data point (simple in-memory storage)
             self._store_data_point(object_name, value, timestamp)
