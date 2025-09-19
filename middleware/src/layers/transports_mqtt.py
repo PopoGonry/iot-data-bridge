@@ -140,7 +140,8 @@ class TransportsLayer(TransportsLayerInterface):
             success_count = 0
             for device_target in device_targets:
                 try:
-                    self.logger.info("Sending to device", 
+                    self.logger.info("📤 TRANSPORTS LAYER: Sending data to device", 
+                                   trace_id=event.trace_id,
                                    device_id=device_target.device_id, 
                                    object=device_target.object, 
                                    value=device_target.value,
@@ -149,9 +150,11 @@ class TransportsLayer(TransportsLayerInterface):
                     success = await self.transport.send_to_device(device_target)
                     if success:
                         success_count += 1
-                        self.logger.info("Successfully sent to device", 
+                        self.logger.info("✅ TRANSPORTS LAYER: Successfully delivered to device", 
+                                       trace_id=event.trace_id,
                                        device_id=device_target.device_id,
-                                       object=device_target.object)
+                                       object=device_target.object,
+                                       value=device_target.value)
                         
                         # Log device ingest
                         ingest_log = DeviceIngestLog(
@@ -161,15 +164,17 @@ class TransportsLayer(TransportsLayerInterface):
                         )
                         await self.device_ingest_callback(ingest_log)
                     else:
-                        self.logger.warning("Failed to send to device", 
+                        self.logger.warning("❌ TRANSPORTS LAYER: Failed to deliver to device", 
+                                          trace_id=event.trace_id,
                                           device_id=device_target.device_id)
                         
                 except Exception as e:
-                    self.logger.error("Error sending to device",
+                    self.logger.error("💥 TRANSPORTS LAYER: Error delivering to device",
+                                    trace_id=event.trace_id,
                                     device_id=device_target.device_id,
                                     error=str(e))
             
-            self.logger.info("Batch delivery completed",
+            self.logger.info("🏁 TRANSPORTS LAYER: Batch delivery completed",
                            trace_id=event.trace_id,
                            object=event.object,
                            total_devices=len(device_targets),
