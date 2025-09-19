@@ -145,7 +145,13 @@ class SignalRInputHandler:
             
             # Schedule the callback as a task
             import asyncio
-            asyncio.create_task(self.callback(ingress_event))
+            try:
+                # Try to get the current event loop
+                loop = asyncio.get_running_loop()
+                loop.create_task(self.callback(ingress_event))
+            except RuntimeError:
+                # If no event loop is running, create a new one
+                asyncio.run(self.callback(ingress_event))
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
