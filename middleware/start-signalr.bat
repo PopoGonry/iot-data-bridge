@@ -18,14 +18,28 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+REM Check if .NET SDK is available
+echo Checking .NET SDK...
+dotnet --version >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    echo .NET SDK not found. Installing .NET SDK...
+    echo.
+    echo Please download and install .NET SDK from:
+    echo https://dotnet.microsoft.com/download
+    echo.
+    echo After installation, please restart this script.
+    pause
+    exit /b 1
+)
+
 REM Check if requirements are installed
-echo Checking dependencies...
+echo Checking Python dependencies...
 pip show signalrcore >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo Installing dependencies...
+    echo Installing Python dependencies...
     pip install -r requirements.txt
     if %ERRORLEVEL% neq 0 (
-        echo Error: Failed to install dependencies
+        echo Error: Failed to install Python dependencies
         pause
         exit /b 1
     )

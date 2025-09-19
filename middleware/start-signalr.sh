@@ -17,13 +17,62 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
+# Check if .NET SDK is available
+echo "Checking .NET SDK..."
+if ! command -v dotnet &> /dev/null; then
+    echo ".NET SDK not found. Installing .NET SDK..."
+    
+    # Detect OS
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Ubuntu/Debian
+        if command -v apt-get &> /dev/null; then
+            echo "Installing .NET SDK for Ubuntu/Debian..."
+            wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+            sudo dpkg -i packages-microsoft-prod.deb
+            rm packages-microsoft-prod.deb
+            sudo apt-get update
+            sudo apt-get install -y dotnet-sdk-8.0
+        # CentOS/RHEL
+        elif command -v yum &> /dev/null; then
+            echo "Installing .NET SDK for CentOS/RHEL..."
+            sudo rpm -Uvh https://packages.microsoft.com/config/centos/7/packages-microsoft-prod.rpm
+            sudo yum install -y dotnet-sdk-8.0
+        else
+            echo "Error: Unsupported Linux distribution. Please install .NET SDK manually."
+            echo "Visit: https://dotnet.microsoft.com/download"
+            exit 1
+        fi
+    # macOS
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "Installing .NET SDK for macOS..."
+        if command -v brew &> /dev/null; then
+            brew install --cask dotnet-sdk
+        else
+            echo "Error: Homebrew not found. Please install .NET SDK manually."
+            echo "Visit: https://dotnet.microsoft.com/download"
+            exit 1
+        fi
+    else
+        echo "Error: Unsupported operating system. Please install .NET SDK manually."
+        echo "Visit: https://dotnet.microsoft.com/download"
+        exit 1
+    fi
+    
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to install .NET SDK"
+        exit 1
+    fi
+    
+    echo ".NET SDK installed successfully!"
+fi
+
 # Check if requirements are installed
-echo "Checking dependencies..."
+echo "Checking Python dependencies..."
 if ! python3 -c "import signalrcore" &> /dev/null; then
-    echo "Installing dependencies..."
+    echo "Installing Python dependencies..."
     pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to install dependencies"
+        echo "Error: Failed to install Python dependencies"
         exit 1
     fi
 fi
