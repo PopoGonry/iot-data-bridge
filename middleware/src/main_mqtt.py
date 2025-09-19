@@ -93,11 +93,12 @@ class IoTDataBridge:
             object_name = event_dict.get('object', '')
             value = event_dict.get('value', '')
             
-            # Only show Data sent logs in console
+            # Show Data sent logs in console with proper format
             if message == "Data sent" and device_id and object_name and value != '':
                 return f"{timestamp} | INFO | Data sent | device_id={device_id} | object={object_name} | value={value}"
             else:
-                return ""  # Don't show other logs in console
+                # Show other important logs normally
+                return message
         
         structlog.configure(
             processors=[
