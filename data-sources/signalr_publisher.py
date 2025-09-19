@@ -187,10 +187,23 @@ async def publish_test_data(hub_url, group_name):
         print("Connected to SignalR hub successfully!")
         print()
         
+        # 연결이 안정화될 때까지 잠시 대기
+        await asyncio.sleep(2)
+        
+        # 연결 상태 확인
+        if hasattr(connection, 'transport') and hasattr(connection.transport, '_ws'):
+            if connection.transport._ws and connection.transport._ws.sock:
+                print("Connection is active and ready")
+            else:
+                print("Warning: Connection may not be fully established")
+        
         # 그룹에 참여
         connection.send("JoinGroup", [group_name])
         print(f"Joined group: {group_name}")
         print()
+        
+        # 그룹 참여 후 잠시 대기
+        await asyncio.sleep(1)
         
         cycle_count = 0
         while running:
@@ -205,8 +218,14 @@ async def publish_test_data(hub_url, group_name):
                     
                 print(f"  {i}. {test_case['name']}: {test_case['data']['payload']['VALUE']}")
                 
-                # SignalR로 메시지 전송
-                connection.send("SendMessage", [group_name, "ingress", json.dumps(test_case['data'])])
+                try:
+                    # SignalR로 메시지 전송
+                    connection.send("SendMessage", [group_name, "ingress", json.dumps(test_case['data'])])
+                    # 메시지 전송 간격
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    print(f"Error sending message {i}: {e}")
+                    break
             
             if running:
                 print(f"Cycle #{cycle_count} completed successfully!")
