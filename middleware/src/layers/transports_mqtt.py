@@ -158,6 +158,7 @@ class TransportsLayer(TransportsLayerInterface):
                         
                         # Log device ingest
                         ingest_log = DeviceIngestLog(
+                            trace_id=event.trace_id,
                             device_id=device_target.device_id,
                             object=device_target.object,
                             value=device_target.value

@@ -207,9 +207,9 @@ async def main():
         value = event_dict.get('value', '')
         
         if object_name and value:
-            return f"{message} device_id={device_id} object={object_name} value={value}"
+            return f"{message} | device_id={device_id} | object={object_name} | value={value}"
         elif device_id:
-            return f"{message} device_id={device_id}"
+            return f"{message} | device_id={device_id}"
         else:
             return message
     

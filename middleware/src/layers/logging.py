@@ -85,16 +85,16 @@ class LoggingLayer(LoggingLayerInterface):
         try:
             self._increment_processed()
             
-            # Convert to dict for JSON serialization (핵심 데이터만)
-            log_data = {
-                "device_id": event.device_id,
-                "object": event.object,
-                "value": event.value
-            }
+            # Create log message in the requested format
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_message = f"{timestamp} | INFO | Data sent | device_id={event.device_id} | object={event.object} | value={event.value}"
             
             # Write to log file
-            await self._write_log(log_data)
-            
+            log_file = Path(self.config.file)
+            with open(log_file, 'a', encoding='utf-8') as f:
+                f.write(log_message + '\n')
+                f.flush()
             
         except Exception as e:
             self._increment_error()

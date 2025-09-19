@@ -138,6 +138,7 @@ class MiddlewareEventLog(BaseModel):
 class DeviceIngestLog(BaseModel):
     """Device ingest log entry"""
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+    trace_id: str = Field(..., description="Trace ID")
     device_id: str = Field(..., description="Device ID")
     object: str = Field(..., description="Object name")
     value: Any = Field(..., description="Value")
