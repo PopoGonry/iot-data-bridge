@@ -18,7 +18,7 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 # Check if requirements are installed
-echo "Checking dependencies..."
+echo "Checking Python dependencies..."
 if ! python3 -c "import aiomqtt" &> /dev/null; then
     echo "Installing dependencies..."
     pip3 install -r requirements.txt
@@ -29,7 +29,7 @@ if ! python3 -c "import aiomqtt" &> /dev/null; then
 fi
 
 echo
-echo "Starting Data Publisher..."
+echo "Starting IoT Data Sources (MQTT)..."
 echo
 echo "Usage Examples:"
 echo "   Local:    python3 mqtt_publisher.py localhost 1883"
@@ -51,4 +51,3 @@ echo
 python3 mqtt_publisher.py $BROKER_HOST $BROKER_PORT
 
 echo
-echo "Data Publisher stopped."

@@ -19,7 +19,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 REM Check if requirements are installed
-echo Checking dependencies...
+echo Checking Python dependencies...
 pip show aiomqtt >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo Installing dependencies...
@@ -37,7 +37,3 @@ echo.
 
 REM Start the middleware
 python src/main_mqtt.py
-
-echo.
-echo Middleware stopped.
-pause

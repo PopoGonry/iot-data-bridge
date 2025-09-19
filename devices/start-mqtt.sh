@@ -18,7 +18,7 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 # Check if requirements are installed
-echo "Checking dependencies..."
+echo "Checking Python dependencies..."
 if ! python3 -c "import aiomqtt" &> /dev/null; then
     echo "Installing dependencies..."
     pip3 install -r requirements.txt
@@ -29,7 +29,7 @@ if ! python3 -c "import aiomqtt" &> /dev/null; then
 fi
 
 echo
-echo "Starting IoT Device..."
+echo "Starting IoT Device (MQTT)..."
 echo
 echo "Usage Examples:"
 echo "   VM-A:     python3 device.py VM-A"
@@ -55,4 +55,3 @@ echo
 python3 device.py $DEVICE_ID $MQTT_HOST $MQTT_PORT
 
 echo
-echo "Device stopped."

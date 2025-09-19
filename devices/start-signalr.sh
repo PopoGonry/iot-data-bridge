@@ -97,4 +97,3 @@ echo
 python3 signalr_device.py $DEVICE_ID $SIGNALR_HOST $SIGNALR_PORT
 
 echo
-echo "Device stopped."

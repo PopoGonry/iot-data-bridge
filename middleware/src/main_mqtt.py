@@ -84,6 +84,8 @@ class IoTDataBridge:
         # Custom formatter for console logs (same as file format)
         def console_formatter(logger, method_name, event_dict):
             """Console formatter matching file log format"""
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             message = event_dict.get('event', '')
             
             # Extract key fields
@@ -91,7 +93,7 @@ class IoTDataBridge:
             object_name = event_dict.get('object', '')
             value = event_dict.get('value', '')
             
-            # Show Data sent logs in console with proper format (no timestamp - structlog will add it)
+            # Show Data sent logs in console with proper format
             if message == "Data sent" and device_id and object_name and value != '':
                 return f"Data sent | device_id={device_id} | object={object_name} | value={value}"
             else:
@@ -114,46 +116,19 @@ class IoTDataBridge:
         )
         
         # Setup file logging
-        from logging.handlers import RotatingFileHandler
-        
-        # Create logs directory
         log_file = Path(self.config.logging.file)
         log_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Setup rotating file handler
-        file_handler = RotatingFileHandler(
-            self.config.logging.file,
-            encoding='utf-8',
-            maxBytes=self.config.logging.max_size,
-            backupCount=self.config.logging.backup_count
-        )
-        file_handler.setLevel(logging.INFO)  # 파일에는 INFO 레벨만
-        
-        # Setup console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.DEBUG)  # 콘솔에는 모든 로그 표시
-        
-        # Setup formatters (Device와 동일한 포맷)
-        file_formatter = logging.Formatter(
-            '%(asctime)s | INFO | %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        console_formatter = logging.Formatter(
-            '%(asctime)s | %(levelname)-5s | %(message)s',
-            datefmt='%H:%M:%S'
-        )
-        
-        file_handler.setFormatter(file_formatter)
-        console_handler.setFormatter(console_formatter)
-        
-        # Configure logging
         logging.basicConfig(
             level=getattr(logging, self.config.logging.level.upper()),
             format='%(message)s',
-            handlers=[file_handler, console_handler]
+            handlers=[
+                logging.FileHandler(log_file),
+                logging.StreamHandler()
+            ]
         )
         
-        self.logger = structlog.get_logger("iot_data_bridge_mqtt")
+        self.logger = structlog.get_logger("iot_data_bridge")
         
     
     async def _initialize_catalogs(self):
@@ -300,7 +275,7 @@ class IoTDataBridge:
             ], cwd=str(mosquitto_conf.parent), capture_output=True, text=True)
             
             if result.returncode == 0:
-                print("MQTT broker started successfully")
+                pass  # MQTT broker started successfully
             else:
                 print(f"Failed to start MQTT broker: {result.stderr}")
                 
@@ -335,7 +310,7 @@ async def main():
         app.setup_signal_handlers()
         await app.start()
     except KeyboardInterrupt:
-        print("\nShutdown requested by user")
+        pass
     except Exception as e:
         print(f"Application error: {e}")
         sys.exit(1)

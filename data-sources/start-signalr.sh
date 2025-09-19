@@ -70,7 +70,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo
-echo "Starting Data Publisher (SignalR)..."
+echo "Starting IoT Data Sources (SignalR)..."
 echo
 
 echo "Usage Examples:"
@@ -93,4 +93,3 @@ echo
 python3 signalr_publisher.py $SIGNALR_HOST $SIGNALR_PORT
 
 echo
-echo "Data Publisher stopped."

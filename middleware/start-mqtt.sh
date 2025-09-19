@@ -18,7 +18,7 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 # Check if requirements are installed
-echo "Checking dependencies..."
+echo "Checking Python dependencies..."
 if ! python3 -c "import aiomqtt" &> /dev/null; then
     echo "Installing dependencies..."
     pip3 install -r requirements.txt
@@ -34,6 +34,3 @@ echo
 
 # Start the middleware
 python3 src/main_mqtt.py
-
-echo
-echo "Middleware stopped."
