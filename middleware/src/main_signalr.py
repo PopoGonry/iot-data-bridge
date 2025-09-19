@@ -46,28 +46,20 @@ class IoTDataBridge:
     async def initialize(self):
         """Initialize the IoT Data Bridge"""
         try:
-            print("Loading configuration...")
             # Load configuration
             await self._load_config()
             
-            print("Setting up logging...")
             # Setup logging
             self._setup_logging()
             
-            print("Initializing catalogs...")
             # Initialize catalogs
             await self._initialize_catalogs()
             
-            print("Initializing layers...")
             # Initialize layers
             await self._initialize_layers()
             
-            print("Starting SignalR hub...")
             # Start SignalR hub
             self._start_signalr_hub()
-            
-            print("IoT Data Bridge (SignalR) initialized successfully")
-            self.logger.info("IoT Data Bridge (SignalR) initialized successfully")
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -101,7 +93,6 @@ class IoTDataBridge:
         with open(config_file, 'r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
         self.config = AppConfig(**config_data)
-        print(f"Loaded configuration from: {config_file}")
     
     def _setup_logging(self):
         """Setup structured logging"""
@@ -171,8 +162,6 @@ class IoTDataBridge:
         
         self.device_catalog = DeviceCatalog(device_catalog_path)
         await self.device_catalog.load()
-        
-        self.logger.info("Catalogs initialized successfully")
     
     async def _initialize_layers(self):
         """Initialize all layers"""
@@ -208,8 +197,6 @@ class IoTDataBridge:
         
         # Set up layer callbacks
         self.resolver_layer.set_transports_callback(self._handle_resolved_event)
-        
-        self.logger.info("Layers initialized successfully")
     
     def _start_signalr_hub(self):
         """Start SignalR hub"""
@@ -251,7 +238,7 @@ class IoTDataBridge:
             
             # Check if process is still running
             if result.poll() is None:
-                print("SignalR hub started successfully")
+                pass  # SignalR hub started successfully
             else:
                 stdout, stderr = result.communicate()
                 print(f"Failed to start SignalR hub: {stderr.decode()}")
@@ -292,39 +279,22 @@ class IoTDataBridge:
         """Start the IoT Data Bridge"""
         try:
             self.is_running = True
-            self.logger.info("Starting IoT Data Bridge (SignalR)")
             
             # Start all layers
-            self.logger.info("Starting input layer...")
             await self.input_layer.start()
-            self.logger.info("Input layer started")
-            
-            self.logger.info("Starting mapping layer...")
             await self.mapping_layer.start()
-            self.logger.info("Mapping layer started")
-            
-            self.logger.info("Starting resolver layer...")
             await self.resolver_layer.start()
-            self.logger.info("Resolver layer started")
-            
-            self.logger.info("Starting transports layer...")
             await self.transports_layer.start()
-            self.logger.info("Transports layer started")
-            
-            self.logger.info("Starting logging layer...")
             await self.logging_layer.start()
-            self.logger.info("Logging layer started")
-            
-            self.logger.info("All layers started successfully")
             
             # Keep running
             while self.is_running:
                 await asyncio.sleep(1)
                 
         except KeyboardInterrupt:
-            self.logger.info("Received shutdown signal")
+            pass
         except Exception as e:
-            self.logger.error("Error in main loop", error=str(e))
+            print(f"Error in main loop: {e}")
         finally:
             await self.stop()
     
@@ -346,8 +316,6 @@ class IoTDataBridge:
         
         # Stop SignalR hub
         self._stop_signalr_hub()
-        
-        self.logger.info("IoT Data Bridge (SignalR) stopped")
 
 
 async def main():
@@ -361,7 +329,6 @@ async def main():
     
     # Setup signal handlers
     def signal_handler(signum, frame):
-        print(f"\nReceived signal {signum}, shutting down...")
         asyncio.create_task(bridge.stop())
     
     signal.signal(signal.SIGINT, signal_handler)

@@ -93,11 +93,9 @@ class TransportsLayer(TransportsLayerInterface):
     
     async def start(self) -> None:
         self.is_running = True
-        self.logger.info("Starting SignalR transports layer")
     
     async def stop(self) -> None:
         self.is_running = False
-        self.logger.info("Stopping SignalR transports layer")
     
     async def send_to_devices(self, event: ResolvedEvent) -> LayerResult:
         self._increment_processed()

@@ -26,15 +26,11 @@ class ResolverLayer(ResolverLayerInterface):
     
     async def start(self):
         """Start resolver layer"""
-        self.logger.info("Starting resolver layer")
         self.is_running = True
-        self.logger.info("Resolver layer started")
     
     async def stop(self):
         """Stop resolver layer"""
-        self.logger.info("Stopping resolver layer")
         self.is_running = False
-        self.logger.info("Resolver layer stopped")
     
     async def resolve_event(self, event: MappedEvent) -> Optional[ResolvedEvent]:
         """Resolve mapped event to target devices"""
