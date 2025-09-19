@@ -248,8 +248,11 @@ class IoTDataBridge:
         import os
         
         try:
-            # Stop any existing mosquitto processes
-            subprocess.run(["pkill", "mosquitto"], check=False)
+            # Stop any existing mosquitto processes (silently ignore errors)
+            try:
+                subprocess.run(["pkill", "mosquitto"], check=False, capture_output=True)
+            except:
+                pass
             
             # Get the directory where mosquitto.conf is located
             # Try multiple possible locations
@@ -290,7 +293,7 @@ class IoTDataBridge:
         """Stop MQTT broker"""
         import subprocess
         try:
-            subprocess.run(["pkill", "mosquitto"], check=False)
+            subprocess.run(["pkill", "mosquitto"], check=False, capture_output=True)
         except Exception as e:
             pass
     
