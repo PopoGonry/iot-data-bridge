@@ -50,6 +50,11 @@ class SignalRInputHandler:
             # Register message handler for ingress messages
             self.connection.on("ingress", self._on_message)
             
+            # Register connection event handlers
+            self.connection.on_open(lambda: self.logger.info("SignalR connection opened"))
+            self.connection.on_close(lambda: self.logger.info("SignalR connection closed"))
+            self.connection.on_error(lambda data: self.logger.error("SignalR connection error", error=data))
+            
             # Wait a moment for SignalR hub to be fully ready
             import time
             self.logger.info("Waiting for SignalR hub to be ready...")
@@ -59,6 +64,17 @@ class SignalRInputHandler:
             # Start connection
             self.connection.start()
             self.logger.info("SignalR connection started successfully")
+            
+            # Wait for connection to stabilize
+            time.sleep(2)
+            
+            # Check if connection is still active
+            if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
+                if self.connection.transport._ws and self.connection.transport._ws.sock:
+                    self.logger.info("Connection is active and ready")
+                else:
+                    self.logger.error("Connection is not active")
+                    raise ConnectionError("SignalR connection is not active")
             
             self.logger.info("Attempting to join group", group=self.config.group)
             # Join group
