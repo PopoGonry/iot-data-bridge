@@ -122,6 +122,12 @@ class SignalRInputHandler:
             # Parse message
             if isinstance(message, str):
                 payload = json.loads(message)
+            elif isinstance(message, list) and len(message) > 0:
+                # If message is a list, take the first element
+                if isinstance(message[0], str):
+                    payload = json.loads(message[0])
+                else:
+                    payload = message[0]
             else:
                 payload = message
             
