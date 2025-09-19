@@ -112,7 +112,7 @@ class IoTDevice:
                                 device_id=self.device_id, 
                                 error=str(e))
     
-    async def _on_message_received(self, *args):
+    def _on_message_received(self, *args):
         """Handle received message from SignalR hub"""
         try:
             # SignalR messages come as a list of arguments
