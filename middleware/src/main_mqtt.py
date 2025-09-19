@@ -252,11 +252,21 @@ class IoTDataBridge:
             subprocess.run(["pkill", "mosquitto"], check=False)
             
             # Get the directory where mosquitto.conf is located
-            config_dir = Path(self.config_path).parent
-            mosquitto_conf = config_dir / "mosquitto.conf"
+            # Try multiple possible locations
+            possible_paths = [
+                Path(self.config_path).parent / "mosquitto.conf",  # config/mosquitto.conf
+                Path("mosquitto.conf"),  # current directory
+                Path("../mosquitto.conf"),  # parent directory
+            ]
             
-            if not mosquitto_conf.exists():
-                print(f"Warning: mosquitto.conf not found at {mosquitto_conf}")
+            mosquitto_conf = None
+            for path in possible_paths:
+                if path.exists():
+                    mosquitto_conf = path
+                    break
+            
+            if not mosquitto_conf:
+                print(f"Warning: mosquitto.conf not found. Searched: {[str(p) for p in possible_paths]}")
                 return
             
             # Start mosquitto with the config file
