@@ -145,6 +145,9 @@ class SignalRInputHandler:
             self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
         except Exception as e:
             import traceback
+            print(f"Error processing SignalR message: {e}")
+            print(f"Message: {message}")
+            print(f"Traceback: {traceback.format_exc()}")
             self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
 
 
