@@ -53,6 +53,7 @@ class SignalRInputHandler:
             
             # Join group
             self.connection.send("JoinGroup", [self.config.group])
+            self.logger.info("Attempting to join group", group=self.config.group)
             
             self.is_running = True
             self.logger.info("SignalR connection started", 
@@ -77,6 +78,7 @@ class SignalRInputHandler:
     
     async def _on_message(self, group: str, target: str, message: str):
         """Handle incoming SignalR message"""
+        self.logger.info("Received SignalR message", group=group, target=target, message_length=len(str(message)))
         try:
             # Parse message
             if isinstance(message, str):
