@@ -106,10 +106,18 @@ class SignalRInputHandler:
                 self.logger.error("Error stopping SignalR connection", error=str(e))
         self.logger.info("SignalR connection stopped")
     
-    async def _on_message(self, group: str, target: str, message: str):
+    async def _on_message(self, *args):
         """Handle incoming SignalR message"""
-        self.logger.info("Received SignalR message", group=group, target=target, message_length=len(str(message)))
+        self.logger.info("Received SignalR message", args_count=len(args), args=args)
         try:
+            # SignalR messages come as a list of arguments
+            if not args or len(args) < 1:
+                self.logger.warning("Received empty or invalid SignalR message", args=args)
+                return
+            
+            # First argument should be the message content
+            message = args[0]
+            
             # Parse message
             if isinstance(message, str):
                 payload = json.loads(message)
@@ -123,8 +131,8 @@ class SignalRInputHandler:
                 raw=payload,
                 meta={
                     "source": "signalr",
-                    "group": group,
-                    "target": target
+                    "group": self.config.group,
+                    "target": "ingress"
                 }
             )
             
