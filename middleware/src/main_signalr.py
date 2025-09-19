@@ -278,11 +278,25 @@ class IoTDataBridge:
             self.logger.info("Starting IoT Data Bridge (SignalR)")
             
             # Start all layers
+            self.logger.info("Starting input layer...")
             await self.input_layer.start()
+            self.logger.info("Input layer started")
+            
+            self.logger.info("Starting mapping layer...")
             await self.mapping_layer.start()
+            self.logger.info("Mapping layer started")
+            
+            self.logger.info("Starting resolver layer...")
             await self.resolver_layer.start()
+            self.logger.info("Resolver layer started")
+            
+            self.logger.info("Starting transports layer...")
             await self.transports_layer.start()
+            self.logger.info("Transports layer started")
+            
+            self.logger.info("Starting logging layer...")
             await self.logging_layer.start()
+            self.logger.info("Logging layer started")
             
             self.logger.info("All layers started successfully")
             
