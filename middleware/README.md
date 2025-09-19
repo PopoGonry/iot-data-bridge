@@ -113,3 +113,29 @@ python src/main_signalr.py
 3. **대상 Device 계산** → Resolver Layer
 4. **데이터 전송** → Transports Layer
 5. **이벤트 로깅** → Logging Layer
+
+## 📝 로그
+
+### **콘솔 로그**
+```
+Mapping catalog loaded
+Device catalog loaded
+Starting MQTT transports layer
+MQTT transports layer started successfully
+Starting logging layer
+Logging layer started
+MQTT broker started successfully
+
+17:57:41 | INFO | Data sent | device_id=VM-A | object=Geo.Latitude | value=37.4558
+17:57:41 | INFO | Data sent | device_id=VM-B | object=Engine1.SpeedRpm | value=4595
+```
+
+### **파일 로그**
+- **위치**: `logs/iot_data_bridge.log`
+- **포맷**: 콘솔 로그와 동일한 `Data sent` 형태
+- **내용**: 성공적으로 전달된 데이터만 기록
+
+### **로그 특징**
+- ✅ **자동 MQTT 브로커 시작**: middleware 시작 시 자동으로 mosquitto 실행
+- ✅ **깔끔한 로그**: `Data sent` 로그만 표시
+- ✅ **통일된 포맷**: device와 동일한 로그 포맷 사용

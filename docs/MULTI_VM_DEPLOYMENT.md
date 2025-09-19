@@ -4,20 +4,20 @@ IoT Data Bridge를 여러 VM에서 실행하는 방법을 설명합니다.
 
 ## 🏗️ VM 구성
 
-### **VM-1: MQTT 브로커 + SignalR Hub + IoT Data Bridge**
+### **VM-1: IoT Data Bridge Middleware**
 - **역할**: 중앙 서버 (미들웨어)
-- **IP**: `192.168.1.100` (예시)
-- **서비스**: Mosquitto, SignalR Hub, IoT Data Bridge
+- **IP**: `192.168.32.102` (예시)
+- **서비스**: 자동 MQTT 브로커, IoT Data Bridge
 
 ### **VM-2: 외부 데이터 소스**
 - **역할**: 외부 데이터 전송
-- **IP**: `192.168.1.101` (예시)
+- **IP**: `192.168.32.103` (예시)
 - **서비스**: MQTT Publisher
 
-### **VM-3~6: IoT Device**
+### **VM-3~4: IoT Device**
 - **역할**: 데이터 수신 및 처리
-- **IP**: `192.168.1.102~105` (예시)
-- **서비스**: IoT Device
+- **IP**: `192.168.32.104~105` (예시)
+- **서비스**: IoT Device (VM-A, VM-B)
 
 ## 🚀 배포 단계
 
@@ -29,54 +29,51 @@ git clone <repository> /opt/iot-data-bridge
 cd /opt/iot-data-bridge
 
 # 2. 의존성 설치
-pip install -r requirements.txt
-
-# 3. MQTT 브로커 설정 (mosquitto.conf 수정)
-# bind_address 0.0.0.0  # 모든 인터페이스에서 수신
-# port 1883
-
-# 4. MQTT 브로커 시작
-mosquitto -c middleware/mosquitto.conf
-
-# 5. SignalR Hub 시작
-cd middleware/signalr_hub
-dotnet run
-
-# 6. IoT Data Bridge 시작
 cd middleware
-python src/main.py --config config/app-multi-vm.yaml
+pip install -r requirements-mqtt.txt
+
+# 3. IoT Data Bridge 시작 (MQTT 브로커 자동 시작)
+./start-mqtt.sh
+
+# 또는 직접 실행
+python src/main_mqtt.py
 ```
 
 ### **2. VM-2 (외부 데이터 소스) 설정**
 
 ```bash
 # 1. 필요한 파일만 복사
-scp -r data_sources/ user@192.168.1.101:/opt/data-sources/
+scp -r data-sources/ user@192.168.32.103:/opt/data-sources/
 
 # 2. 의존성 설치
-pip install aiomqtt
+cd /opt/data-sources
+pip install -r requirements.txt
 
 # 3. 데이터 전송
-cd /opt/data-sources
-python test_mqtt_publisher-multi-vm.py 192.168.1.100 1883
+python mqtt_publisher.py 192.168.32.102 1883
+
+# 또는 start.sh 스크립트 사용
+./start.sh
 ```
 
-### **3. VM-3~6 (IoT Device) 설정**
+### **3. VM-3~4 (IoT Device) 설정**
 
 ```bash
 # 1. Device 파일 복사
-scp -r devices/ user@192.168.1.102:/opt/iot-device/
+scp -r devices/ user@192.168.32.104:/opt/iot-device/
 
 # 2. 의존성 설치
-pip install aiomqtt structlog pyyaml
-
-# 3. 설정 파일 수정
 cd /opt/iot-device
-cp device_config-multi-vm.yaml device_config.yaml
-# device_config.yaml에서 IP 주소 수정
+pip install -r requirements.txt
 
-# 4. Device 실행
-python device.py VM-A device_config.yaml
+# 3. Device 실행 (명령행 인수 사용)
+python device.py VM-A 192.168.32.102 1883
+
+# 또는 start.sh 스크립트 사용
+./start.sh
+# Enter Device ID (default: VM-A): VM-A
+# Enter MQTT broker host (default: localhost): 192.168.32.102
+# Enter MQTT broker port (default: 1883): 1883
 ```
 
 ## ⚙️ 설정 파일 수정
@@ -84,28 +81,26 @@ python device.py VM-A device_config.yaml
 ### **MQTT 브로커 설정 (mosquitto.conf)**
 ```conf
 # 모든 인터페이스에서 수신
-bind_address 0.0.0.0
-port 1883
+listener 1883 0.0.0.0
+allow_anonymous true
 
 # 로그 설정
-log_dest file /var/log/mosquitto/mosquitto.log
+log_dest stdout
 log_type error
 log_type warning
 log_type notice
 log_type information
+log_type debug
 
 # 데이터 디렉토리
 persistence true
-persistence_location /var/lib/mosquitto/
+persistence_location ./mosquitto_data/
 ```
 
 ### **방화벽 설정**
 ```bash
 # MQTT 포트 (1883) 열기
 sudo ufw allow 1883
-
-# SignalR 포트 (5000) 열기
-sudo ufw allow 5000
 ```
 
 ## 🔧 네트워크 연결 테스트
@@ -113,23 +108,33 @@ sudo ufw allow 5000
 ### **MQTT 연결 테스트**
 ```bash
 # VM-2에서 VM-1의 MQTT 브로커 연결 테스트
-mosquitto_pub -h 192.168.1.100 -p 1883 -t "test/topic" -m "Hello World"
+mosquitto_pub -h 192.168.32.102 -p 1883 -t "test/topic" -m "Hello World"
 
 # VM-3에서 구독 테스트
-mosquitto_sub -h 192.168.1.100 -p 1883 -t "test/topic"
-```
-
-### **SignalR 연결 테스트**
-```bash
-# 웹 브라우저에서 접속
-http://192.168.1.100:5000/hub
+mosquitto_sub -h 192.168.32.102 -p 1883 -t "test/topic"
 ```
 
 ## 📊 실행 순서
 
-1. **VM-1**: MQTT 브로커 + SignalR Hub + IoT Data Bridge 시작
-2. **VM-3~6**: IoT Device 시작
+1. **VM-1**: IoT Data Bridge Middleware 시작 (MQTT 브로커 자동 시작)
+2. **VM-3~4**: IoT Device 시작
 3. **VM-2**: 외부 데이터 전송
+
+## 📝 로그 확인
+
+### **Middleware 로그**
+```bash
+# VM-1에서
+tail -f middleware/logs/iot_data_bridge.log
+# 2025-09-19 17:57:41 | INFO | Data sent | device_id=VM-A | object=Geo.Latitude | value=37.4558
+```
+
+### **Device 로그**
+```bash
+# VM-3에서
+tail -f devices/logs/device.log
+# 2025-09-19 17:57:41 | INFO | Data received | device_id=VM-A | object=Geo.Latitude | value=37.4558
+```
 
 ## 🐛 문제 해결
 
@@ -140,20 +145,20 @@ http://192.168.1.100:5000/hub
 
 ### **MQTT 연결 실패**
 ```bash
-# MQTT 브로커 상태 확인
-sudo systemctl status mosquitto
+# MQTT 브로커 상태 확인 (middleware가 자동으로 시작)
+ps aux | grep mosquitto
 
-# 로그 확인
-sudo tail -f /var/log/mosquitto/mosquitto.log
+# 포트 확인
+netstat -tlnp | grep 1883
 ```
 
 ### **Device 연결 실패**
 ```bash
 # Device 로그 확인
-tail -f device.log
+tail -f devices/logs/device.log
 
 # MQTT 브로커 연결 테스트
-mosquitto_pub -h 192.168.1.100 -p 1883 -t "devices/vm-a/ingress" -m '{"object":"Geo.Latitude","value":37.5665,"timestamp":1695123456.789}'
+mosquitto_pub -h 192.168.32.102 -p 1883 -t "devices/vm-a/ingress" -m '{"object":"Geo.Latitude","value":37.5665,"timestamp":1695123456.789}'
 ```
 
 ## 📝 주의사항

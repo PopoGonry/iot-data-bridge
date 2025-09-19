@@ -44,8 +44,7 @@ iot-data-bridge/
 │   ├── requirements-signalr.txt # SignalR 전용 의존성
 │   └── README.md           # 사용법 문서
 ├── devices/                 # IoT Device (독립 프로젝트)
-│   ├── device.py           # Device 실행 파일
-│   ├── device_config.yaml  # Device 설정 파일
+│   ├── device.py           # Device 실행 파일 (명령행 인수 사용)
 │   ├── start.bat           # Windows 실행 스크립트
 │   ├── start.sh            # Linux/macOS 실행 스크립트
 │   ├── requirements.txt    # 프로젝트 의존성
@@ -93,8 +92,7 @@ cd devices && ./start.sh        # Linux/macOS
 # middleware/config/app-mqtt.yaml 파일에서 MQTT IP 주소 수정
 # middleware/config/app-signalr.yaml 파일에서 SignalR IP 주소 수정
 
-# 디바이스 설정 (각 VM에서)
-# devices/device_config.yaml 파일에서 device_id와 MQTT host 수정
+# 디바이스는 명령행 인수로 설정 (설정 파일 불필요)
 ```
 
 ### 4. 전체 시스템 테스트
@@ -112,13 +110,13 @@ python mqtt_publisher.py localhost 1883
 ### 5. Device 실행
 
 ```bash
-# 각 VM에서 Device 실행 (기본 config 사용)
+# 각 VM에서 Device 실행 (명령행 인수 사용)
 cd devices
-python device.py VM-A
-python device.py VM-B
+python device.py VM-A localhost 1883
+python device.py VM-B 192.168.1.100 1883
 
-# 또는 특정 config 파일 사용
-python device.py VM-A device_config.yaml
+# 또는 start.sh 스크립트 사용
+./start.sh  # 대화형으로 device_id, host, port 입력
 ```
 
 ## ⚙️ 설정
@@ -178,28 +176,24 @@ mappings:
 
 ## 📝 로그
 
-### MiddlewareEventLog
+### 통일된 로그 포맷
 
-```json
-{
-  "timestamp": "2025-09-18T10:30:45Z",
-  "trace_id": "550e8400-e29b-41d4-a716-446655440000",
-  "raw": "{...원문 데이터...}",
-  "object": "Geo.Latitude",
-  "send_devices": ["VM-A", "VM-C"]
-}
+**Middleware (Data sent):**
+```
+2025-09-19 17:57:41 | INFO | Data sent | device_id=VM-A | object=Geo.Latitude | value=37.4558
+2025-09-19 17:57:41 | INFO | Data sent | device_id=VM-B | object=Engine1.SpeedRpm | value=4595
 ```
 
-### DeviceIngestLog
-
-```json
-{
-  "timestamp": "2025-09-18T10:30:46Z",
-  "device_id": "VM-A",
-  "object": "Geo.Latitude",
-  "value": 37.5665
-}
+**Device (Data received):**
 ```
+2025-09-19 17:57:41 | INFO | Data received | device_id=VM-A | object=Geo.Latitude | value=37.4558
+2025-09-19 17:57:41 | INFO | Data received | device_id=VM-B | object=Engine1.SpeedRpm | value=4595
+```
+
+### 로그 파일 위치
+
+- **Middleware**: `middleware/logs/iot_data_bridge.log`
+- **Device**: `devices/logs/device.log`
 
 ## 🛠️ 개발
 

@@ -27,13 +27,19 @@ start.bat
 ### **직접 실행**
 ```bash
 # MQTT로 데이터 전송 (5초마다 랜덤 데이터)
-# 사용법: python mqtt_publisher.py <broker_host> [broker_port]
+# 사용법: python mqtt_publisher.py <broker_host> <broker_port>
 
 # 로컬 환경
 python mqtt_publisher.py localhost 1883
 
-# 원격 환경
-python mqtt_publisher.py 192.168.1.100 1883
+# 원격 환경 (middleware 서버)
+python mqtt_publisher.py 192.168.32.102 1883
+
+# 명령행 인수 필수 (없으면 사용법 안내 표시)
+python mqtt_publisher.py
+# Usage Examples:
+#    Local:    python3 mqtt_publisher.py localhost 1883
+#    Remote:   python3 mqtt_publisher.py 192.168.1.100 1883
 ```
 
 ### **데이터 생성**
@@ -66,3 +72,24 @@ python data_generator.py
 1. **GPS 데이터**: 위도/경도/고도
 2. **엔진 데이터**: RPM/온도
 3. **환경 데이터**: 습도/온도
+
+## 📝 로그
+
+### **콘솔 로그**
+```
+Starting IoT Data Publisher
+Connecting to MQTT broker at 192.168.32.102:1883
+Publishing to topic: iot/ingress
+Interval: 5 seconds
+Press Ctrl+C to stop
+
+Starting with broker: 192.168.32.102:1883
+Cycle 1: Publishing random data...
+Cycle 2: Publishing random data...
+```
+
+### **특징**
+- ✅ **주기적 전송**: 5초마다 랜덤 데이터 전송
+- ✅ **모든 객체 포함**: GPS, Engine, Environment 데이터 모두 생성
+- ✅ **Graceful Shutdown**: Ctrl+C로 안전한 종료
+- ✅ **명령행 인수 필수**: broker_host, broker_port 반드시 지정
