@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-IoT Device - Simple device that receives data via MQTT and logs it
+IoT Device - Simulates a device receiving data from middleware
 """
 
 import asyncio
@@ -8,53 +8,56 @@ import json
 import sys
 import yaml
 from pathlib import Path
-from datetime import datetime
+from typing import Dict, Any, Optional
 import structlog
 from aiomqtt import Client
 
 
 class IoTDevice:
-    """Simple IoT Device that receives data and logs it"""
+    """IoT Device that receives data from middleware"""
     
-    def __init__(self, device_id: str, config: dict):
+    def __init__(self, device_id: str, config: Dict[str, Any]):
         self.device_id = device_id
         self.config = config
-        self.logger = structlog.get_logger(f"device_{device_id}")
-        self.is_running = False
         self.client = None
+        self.is_running = False
         self.data_count = 0
+        self.logger = structlog.get_logger(f"device_{device_id}")
     
     async def start(self):
         """Start the device"""
+        # Get MQTT settings
+        mqtt_config = self.config.get('mqtt', {})
+        host = mqtt_config.get('host', 'localhost')
+        port = mqtt_config.get('port', 1883)
+        topic = mqtt_config.get('topic', f'devices/{self.device_id.lower()}/ingress')
+        qos = mqtt_config.get('qos', 1)
+        
+        self.logger.info("Starting device", 
+                       device_id=self.device_id,
+                       host=host,
+                       port=port,
+                       topic=topic)
+        
+        # Create MQTT client
+        self.client = Client(
+            hostname=host,
+            port=port,
+            username=mqtt_config.get('username'),
+            password=mqtt_config.get('password'),
+            keepalive=mqtt_config.get('keepalive', 60)
+        )
+        
         try:
-            # Get MQTT settings
-            mqtt_config = self.config.get('mqtt', {})
-            host = mqtt_config.get('host', 'localhost')
-            port = mqtt_config.get('port', 1883)
-            topic = mqtt_config.get('topic', f'devices/{self.device_id.lower()}/ingress')
-            qos = mqtt_config.get('qos', 1)
-            
-            self.logger.info("Starting device", 
-                           device_id=self.device_id,
-                           host=host,
-                           port=port,
-                           topic=topic)
-            
-            # Create MQTT client
-            self.client = Client(
-                hostname=host,
-                port=port,
-                username=mqtt_config.get('username'),
-                password=mqtt_config.get('password'),
-                keepalive=mqtt_config.get('keepalive', 60)
-            )
-            
-            # Start MQTT client
             async with self.client:
+                self.logger.debug("MQTT broker connection successful", host=host, port=port)
+                
+                self.logger.debug("Starting MQTT topic subscription", topic=topic, qos=qos)
                 await self.client.subscribe(topic, qos=qos)
-                self.logger.info("Subscribed to MQTT topic", topic=topic)
+                self.logger.debug("MQTT topic subscription completed", topic=topic)
                 
                 self.is_running = True
+                self.logger.info("Device waiting for messages")
                 
                 # Listen for messages
                 async for message in self.client.messages:
@@ -62,20 +65,27 @@ class IoTDevice:
                         break
                     
                     try:
+                        self.logger.debug("Raw MQTT message received", 
+                                       topic=message.topic,
+                                       payload_size=len(message.payload),
+                                       qos=message.qos)
                         await self._handle_message(message)
                     except Exception as e:
                         self.logger.error("Error handling message", error=str(e))
                         
         except Exception as e:
-            self.logger.error("Device error", error=str(e))
+            self.logger.error("Device connection failed", 
+                            error=str(e), 
+                            error_type=type(e).__name__,
+                            host=host, 
+                            port=port)
             raise
     
     async def stop(self):
         """Stop the device"""
         self.logger.info("Stopping device", device_id=self.device_id)
         self.is_running = False
-        if self.client:
-            await self.client.disconnect()
+        # aiomqtt client will be closed when exiting the async with context
     
     async def _handle_message(self, message):
         """Handle incoming MQTT message"""
@@ -86,9 +96,8 @@ class IoTDevice:
             # Extract data
             object_name = payload.get('object')
             value = payload.get('value')
-            timestamp = payload.get('timestamp')
             
-            if not all([object_name, value is not None, timestamp]):
+            if not all([object_name, value is not None]):
                 self.logger.warning("Invalid message format", payload=payload)
                 return
             
@@ -96,11 +105,10 @@ class IoTDevice:
             self.data_count += 1
             
             # Log received data
-            self.logger.info("Received data",
+            self.logger.info("Data received",
                            device_id=self.device_id,
                            object=object_name,
                            value=value,
-                           timestamp=timestamp,
                            count=self.data_count)
             
         except json.JSONDecodeError as e:
@@ -111,90 +119,101 @@ class IoTDevice:
 
 async def main():
     """Main function"""
-    # Parse command line arguments
     if len(sys.argv) < 2:
         print("Usage: python device.py <device_id> [config_file]")
-        print("       python device.py <device_id> [mqtt_host] [mqtt_port]")
-        print("Example: python device.py VM-A")
-        print("Example: python device.py VM-A device_config.yaml")
-        print("Example: python device.py VM-A localhost 1883")
         sys.exit(1)
     
     device_id = sys.argv[1]
+    config_file = sys.argv[2] if len(sys.argv) > 2 else "device_config.yaml"
     
-    # Check if second argument is a config file or mqtt_host
-    if len(sys.argv) > 2 and sys.argv[2].endswith('.yaml'):
-        # Load from specified config file
-        config_path = sys.argv[2]
-        config_file = Path(config_path)
-        
-        if not config_file.exists():
-            print(f"Config file not found: {config_path}")
-            sys.exit(1)
-        
-        with open(config_file, 'r', encoding='utf-8') as f:
-            config_data = yaml.safe_load(f)
-        
-        device_config = config_data
-        print(f"Loaded configuration from {config_path}")
-        
-    else:
-        # Try to load from default config file
-        default_config = Path("device_config.yaml")
-        if default_config.exists():
-            with open(default_config, 'r', encoding='utf-8') as f:
-                config_data = yaml.safe_load(f)
-            device_config = config_data
-            print(f"Loaded configuration from: {default_config}")
-        else:
-            # Use command line arguments
-            mqtt_host = sys.argv[2] if len(sys.argv) > 2 else "localhost"
-            mqtt_port = int(sys.argv[3]) if len(sys.argv) > 3 else 1883
-            
-            device_config = {
-                'mqtt': {
-                    'host': mqtt_host,
-                    'port': mqtt_port,
-                    'topic': f'devices/{device_id.lower()}/ingress',
-                    'qos': 1,
-                    'keepalive': 60
-                }
-            }
-            print(f"Using command line configuration")
+    print(f"Starting IoT Device: {device_id}")
+    print(f"Config file: {config_file}")
     
-    # Override device_id in config
-    device_config['device_id'] = device_id
+    # Load configuration
+    config_path = Path(config_file)
+    if not config_path.exists():
+        print(f"Error: Config file not found: {config_file}")
+        sys.exit(1)
     
-    # Ensure topic is set correctly and replace placeholders
-    if 'mqtt' not in device_config:
-        device_config['mqtt'] = {}
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
     
-    if 'topic' not in device_config['mqtt']:
-        device_config['mqtt']['topic'] = f'devices/{device_id.lower()}/ingress'
-    else:
-        # Replace {device_id} placeholder in topic
-        device_config['mqtt']['topic'] = device_config['mqtt']['topic'].format(device_id=device_id.lower())
+    # Override device_id from command line
+    config['device_id'] = device_id
     
-    # Replace placeholders in signalr group if exists
-    if 'signalr' in device_config and 'group' in device_config['signalr']:
-        device_config['signalr']['group'] = device_config['signalr']['group'].format(device_id=device_id.lower())
-    
+    print(f"Loaded configuration from {config_file}")
     print(f"Device {device_id} configuration:")
-    print(f"  - MQTT Host: {device_config['mqtt'].get('host', 'localhost')}:{device_config['mqtt'].get('port', 1883)}")
-    print(f"  - Topic: {device_config['mqtt']['topic']}")
+    print(f"  - MQTT Host: {config['mqtt']['host']}:{config['mqtt']['port']}")
+    print(f"  - Topic: {config['mqtt']['topic']}")
     
     # Setup logging
+    import logging
+    from logging.handlers import RotatingFileHandler
+    
+    # Create logs directory
+    logs_dir = Path("logs")
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Setup file handler
+    log_file = logs_dir / config.get('logging', {}).get('file', 'device.log')
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=config.get('logging', {}).get('max_size', 10485760),  # 10MB
+        backupCount=config.get('logging', {}).get('backup_count', 5),
+        encoding='utf-8'
+    )
+    file_handler.setLevel(logging.INFO)
+    
+    # Setup console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.DEBUG)  # 콘솔에는 모든 로그 표시
+    
+    # Setup formatters
+    file_formatter = logging.Formatter(
+        '%(asctime)s | INFO | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    console_formatter = logging.Formatter(
+        '%(asctime)s | %(levelname)-5s | %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    file_handler.setFormatter(file_formatter)
+    console_handler.setFormatter(console_formatter)
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[file_handler, console_handler],
+        force=True
+    )
+    
+    # Configure structlog with custom formatter
+    def simple_formatter(logger, method_name, event_dict):
+        """Simple formatter for clean logs"""
+        level = event_dict.get('level', 'INFO').upper()
+        message = event_dict.get('event', '')
+        
+        # Extract key fields
+        device_id = event_dict.get('device_id', '')
+        object_name = event_dict.get('object', '')
+        value = event_dict.get('value', '')
+        
+        if object_name and value:
+            return f"{message} device_id={device_id} object={object_name} value={value}"
+        elif device_id:
+            return f"{message} device_id={device_id}"
+        else:
+            return message
+    
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
-            structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
+            structlog.processors.TimeStamper(fmt="%H:%M:%S"),
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
-            structlog.processors.JSONRenderer()
+            simple_formatter
         ],
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -203,14 +222,18 @@ async def main():
     )
     
     # Create and start device
-    device = IoTDevice(device_id, device_config)
+    print(f"Creating device instance for {device_id}...")
+    device = IoTDevice(device_id, config)
     
     try:
+        print(f"Starting device {device_id}...")
         await device.start()
     except KeyboardInterrupt:
         print(f"\nShutting down {device_id} Device...")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error starting device: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         await device.stop()
 

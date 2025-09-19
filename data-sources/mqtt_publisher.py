@@ -156,6 +156,7 @@ def signal_handler(signum, frame):
 async def publish_test_data(broker_host, broker_port):
     """Publish random test data to MQTT broker periodically"""
     
+    # MQTT broker settings
     topic = "iot/ingress"
     interval = 5  # 5초마다 데이터 전송
     
@@ -234,4 +235,3 @@ if __name__ == "__main__":
         print(f"Unexpected error: {e}")
     finally:
         print("Goodbye!")
-

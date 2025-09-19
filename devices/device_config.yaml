@@ -1,23 +1,18 @@
-# Device Configuration
+# Device Configuration Template
+# Copy this file to each VM and customize as needed
 
-# Device ID (각 VM에 맞게 수정)
-device_id: "VM-A"  # VM-A, VM-B 등으로 변경
+# Device ID (will be overridden by command line argument)
+device_id: "VM-A"
 
 # MQTT Configuration
 mqtt:
-  host: "192.168.32.102"          # 로컬 개발: localhost, 멀티 VM: 192.168.1.100
+  host: "192.168.32.102"     # MQTT broker host (Middleware server IP)
   port: 1883                 # MQTT broker port
-  topic: "devices/{device_id}/ingress"  # device_id에 따라 자동 생성
+  topic: "devices/vm-a/ingress"  # Will be auto-generated from device_id
   qos: 1                     # MQTT QoS level
   keepalive: 60              # MQTT keepalive interval
   username: null             # MQTT username (optional)
   password: null             # MQTT password (optional)
-
-# SignalR Configuration (선택사항)
-# signalr:
-#   url: "http://192.168.1.100:5000/hub"  # SignalR Hub IP
-#   group: "{device_id}"                  # device_id에 따라 자동 생성
-#   target: "ingress"
 
 # Logging Configuration
 logging:
