@@ -5,6 +5,7 @@ Logging Layer - Handles event logging
 import asyncio
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 import structlog
@@ -29,8 +30,8 @@ class LoggingLayer(LoggingLayerInterface):
         log_file = Path(self.config.file)
         log_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Setup file handler
-        file_handler = logging.FileHandler(
+        # Setup rotating file handler
+        file_handler = RotatingFileHandler(
             self.config.file,
             encoding='utf-8',
             maxBytes=self.config.max_size,
