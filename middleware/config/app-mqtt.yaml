@@ -25,6 +25,7 @@ transports:
     port: 1883
     username: null
     password: null
+    topic: "devices/{device_id}/ingress"  # Device별 토픽 (placeholder 사용)
     qos: 1
     keepalive: 60
     ssl: false
