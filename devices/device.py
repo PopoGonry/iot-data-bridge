@@ -120,28 +120,52 @@ class IoTDevice:
 async def main():
     """Main function"""
     if len(sys.argv) < 2:
-        print("Usage: python device.py <device_id> [config_file]")
+        print("Usage: python device.py <device_id> [mqtt_host] [mqtt_port]")
         sys.exit(1)
     
     device_id = sys.argv[1]
-    config_file = sys.argv[2] if len(sys.argv) > 2 else "device_config.yaml"
+    mqtt_host = sys.argv[2] if len(sys.argv) > 2 else "localhost"
+    mqtt_port = int(sys.argv[3]) if len(sys.argv) > 3 else 1883
     
     print(f"Starting IoT Device: {device_id}")
-    print(f"Config file: {config_file}")
+    print(f"MQTT Host: {mqtt_host}:{mqtt_port}")
     
-    # Load configuration
-    config_path = Path(config_file)
-    if not config_path.exists():
-        print(f"Error: Config file not found: {config_file}")
-        sys.exit(1)
+    # Load configuration from template or create default
+    config_file = Path("device_config.yaml")
+    if config_file.exists():
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config_data = yaml.safe_load(f)
+        print(f"Loaded configuration from: {config_file}")
+    else:
+        # Create default configuration
+        config_data = {
+            'device_id': device_id,
+            'mqtt': {
+                'host': mqtt_host,
+                'port': mqtt_port,
+                'topic': f'devices/{device_id.lower()}/ingress',
+                'qos': 1,
+                'keepalive': 60,
+                'username': None,
+                'password': None
+            },
+            'logging': {
+                'level': 'INFO',
+                'file': 'device.log',
+                'max_size': 10485760,
+                'backup_count': 5
+            }
+        }
+        print("Using default configuration")
     
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
+    # Override device_id and MQTT settings from command line
+    config_data['device_id'] = device_id
+    config_data['mqtt']['host'] = mqtt_host
+    config_data['mqtt']['port'] = mqtt_port
+    config_data['mqtt']['topic'] = f'devices/{device_id.lower()}/ingress'
     
-    # Override device_id from command line
-    config['device_id'] = device_id
+    config = config_data
     
-    print(f"Loaded configuration from {config_file}")
     print(f"Device {device_id} configuration:")
     print(f"  - MQTT Host: {config['mqtt']['host']}:{config['mqtt']['port']}")
     print(f"  - Topic: {config['mqtt']['topic']}")
