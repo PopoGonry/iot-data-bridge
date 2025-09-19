@@ -61,6 +61,8 @@ class IoTDataBridge:
             # Initialize layers
             await self._initialize_layers()
             
+            # Start MQTT broker
+            self._start_mqtt_broker()
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -239,6 +241,40 @@ class IoTDataBridge:
         
         # Stop MQTT broker
         self._stop_mqtt_broker()
+    
+    def _start_mqtt_broker(self):
+        """Start MQTT broker"""
+        import subprocess
+        import os
+        
+        try:
+            # Stop any existing mosquitto processes
+            subprocess.run(["pkill", "mosquitto"], check=False)
+            
+            # Get the directory where mosquitto.conf is located
+            config_dir = Path(self.config_path).parent
+            mosquitto_conf = config_dir / "mosquitto.conf"
+            
+            if not mosquitto_conf.exists():
+                print(f"Warning: mosquitto.conf not found at {mosquitto_conf}")
+                return
+            
+            # Start mosquitto with the config file
+            result = subprocess.run([
+                "mosquitto", 
+                "-c", str(mosquitto_conf), 
+                "-d"
+            ], cwd=str(config_dir), capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print("MQTT broker started successfully")
+            else:
+                print(f"Failed to start MQTT broker: {result.stderr}")
+                
+        except FileNotFoundError:
+            print("Warning: mosquitto not found. Please install mosquitto or start MQTT broker manually.")
+        except Exception as e:
+            print(f"Error starting MQTT broker: {e}")
     
     def _stop_mqtt_broker(self):
         """Stop MQTT broker"""
