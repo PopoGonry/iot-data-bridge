@@ -76,23 +76,25 @@ echo
 echo "Usage Examples:"
 echo "   VM-A:     python3 signalr_device.py VM-A"
 echo "   VM-B:     python3 signalr_device.py VM-B"
-echo "   Custom:   python3 signalr_device.py MyDevice http://192.168.1.100:5000/hub MyGroup"
+echo "   Custom:   python3 signalr_device.py MyDevice 192.168.1.100 5000"
 echo
 
-read -p "Enter Device ID (default: VM-A): " device_id
-device_id=${device_id:-VM-A}
+# Get device ID from user
+read -p "Enter Device ID (default: VM-A): " DEVICE_ID
+DEVICE_ID=${DEVICE_ID:-VM-A}
 
-read -p "Enter SignalR hub URL (default: http://localhost:5000/hub): " signalr_url
-signalr_url=${signalr_url:-http://localhost:5000/hub}
+read -p "Enter SignalR hub host (default: localhost): " SIGNALR_HOST
+SIGNALR_HOST=${SIGNALR_HOST:-localhost}
 
-read -p "Enter Group name (default: $device_id): " group_name
-group_name=${group_name:-$device_id}
+read -p "Enter SignalR hub port (default: 5000): " SIGNALR_PORT
+SIGNALR_PORT=${SIGNALR_PORT:-5000}
 
 echo
-echo "Starting Device: $device_id with SignalR: $signalr_url"
+echo "Starting Device: $DEVICE_ID with SignalR: $SIGNALR_HOST:$SIGNALR_PORT"
 echo
 
-python3 signalr_device.py "$device_id" "$signalr_url" "$group_name"
+# Start the device (group name will be same as device ID)
+python3 signalr_device.py $DEVICE_ID $SIGNALR_HOST $SIGNALR_PORT
 
 echo
 echo "Device stopped."

@@ -40,23 +40,23 @@ echo.
 echo Usage Examples:
 echo    VM-A:     python signalr_device.py VM-A
 echo    VM-B:     python signalr_device.py VM-B
-echo    Custom:   python signalr_device.py MyDevice http://192.168.1.100:5000/hub MyGroup
+echo    Custom:   python signalr_device.py MyDevice 192.168.1.100 5000
 echo.
 
-set /p device_id="Enter Device ID (default: VM-A): "
-if "%device_id%"=="" set device_id=VM-A
+set /p DEVICE_ID="Enter Device ID (default: VM-A): "
+if "%DEVICE_ID%"=="" set DEVICE_ID=VM-A
 
-set /p signalr_url="Enter SignalR hub URL (default: http://localhost:5000/hub): "
-if "%signalr_url%"=="" set signalr_url=http://localhost:5000/hub
+set /p SIGNALR_HOST="Enter SignalR hub host (default: localhost): "
+if "%SIGNALR_HOST%"=="" set SIGNALR_HOST=localhost
 
-set /p group_name="Enter Group name (default: %device_id%): "
-if "%group_name%"=="" set group_name=%device_id%
+set /p SIGNALR_PORT="Enter SignalR hub port (default: 5000): "
+if "%SIGNALR_PORT%"=="" set SIGNALR_PORT=5000
 
 echo.
-echo Starting Device: %device_id% with SignalR: %signalr_url%
+echo Starting Device: %DEVICE_ID% with SignalR: %SIGNALR_HOST%:%SIGNALR_PORT%
 echo.
 
-python signalr_device.py %device_id% %signalr_url% %group_name%
+python signalr_device.py %DEVICE_ID% %SIGNALR_HOST% %SIGNALR_PORT%
 
 echo.
 echo Device stopped.

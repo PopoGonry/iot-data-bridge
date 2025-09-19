@@ -154,14 +154,22 @@ class IoTDevice:
 async def main():
     """Main function"""
     if len(sys.argv) < 2:
-        print("Usage: python signalr_device.py <device_id> [signalr_url] [group_name]")
+        print("Usage: python signalr_device.py <device_id> [signalr_host] [signalr_port]")
         sys.exit(1)
     
     device_id = sys.argv[1]
-    signalr_url = sys.argv[2] if len(sys.argv) > 2 else "http://localhost:5000/hub"
-    group_name = sys.argv[3] if len(sys.argv) > 3 else device_id
+    signalr_host = sys.argv[2] if len(sys.argv) > 2 else "localhost"
+    signalr_port = sys.argv[3] if len(sys.argv) > 3 else "5000"
+    
+    # Group name is same as device ID
+    group_name = device_id
+    
+    # Build SignalR URL
+    signalr_url = f"http://{signalr_host}:{signalr_port}/hub"
     
     print(f"Starting IoT Device: {device_id}")
+    print(f"SignalR Host: {signalr_host}")
+    print(f"SignalR Port: {signalr_port}")
     print(f"SignalR URL: {signalr_url}")
     print(f"Group: {group_name}")
     
