@@ -8,7 +8,7 @@ device_catalog_path: "config/devices.yaml"
 input:
   type: "signalr"
   signalr:
-    url: "http://0.0.0.0:5000/hub"  # 외부 접근 허용
+    url: "http://localhost:5000/hub"  # localhost로 연결
     group: "iot_clients"
     username: null
     password: null
@@ -17,7 +17,7 @@ input:
 transports:
   type: "signalr"
   signalr:
-    url: "http://0.0.0.0:5000/hub"  # 외부 접근 허용
+    url: "http://localhost:5000/hub"  # localhost로 연결
     group: "iot_devices"
     username: null
     password: null
