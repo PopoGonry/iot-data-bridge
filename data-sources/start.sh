@@ -1,6 +1,10 @@
 #!/bin/bash
 # Data Sources Start Script for Linux/macOS
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "========================================"
 echo "   IoT Data Bridge - Data Sources"
 echo "========================================"

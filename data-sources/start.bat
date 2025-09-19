@@ -1,6 +1,9 @@
 @echo off
 REM Data Sources Start Script for Windows
 
+REM Change to the directory where this script is located
+cd /d "%~dp0"
+
 echo ========================================
 echo    IoT Data Bridge - Data Sources
 echo ========================================

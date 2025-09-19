@@ -1,6 +1,9 @@
 @echo off
 REM Devices Start Script for Windows
 
+REM Change to the directory where this script is located
+cd /d "%~dp0"
+
 echo ========================================
 echo    IoT Data Bridge - Devices
 echo ========================================
