@@ -58,6 +58,10 @@ class IoTDataBridge:
             # Initialize layers
             await self._initialize_layers()
             
+<<<<<<< Updated upstream
+=======
+            
+>>>>>>> Stashed changes
             self.logger.info("IoT Data Bridge (SignalR) initialized successfully")
             
         except Exception as e:
@@ -67,15 +71,36 @@ class IoTDataBridge:
     async def _load_config(self):
         """Load configuration from YAML file"""
         if self.config_path:
+<<<<<<< Updated upstream
             # Use specified config file
+=======
+>>>>>>> Stashed changes
             config_file = Path(self.config_path)
             if not config_file.exists():
                 raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
         else:
+<<<<<<< Updated upstream
             # Use default config file
             config_file = Path("config/app-signalr.yaml")
             if not config_file.exists():
                 raise FileNotFoundError(f"Configuration file not found: {config_file}")
+=======
+            # Try multiple possible config file locations
+            config_files = [
+                "config/app-signalr.yaml",
+                "middleware/config/app-signalr.yaml",
+                "app-signalr.yaml"
+            ]
+            
+            config_file = None
+            for file in config_files:
+                if Path(file).exists():
+                    config_file = Path(file)
+                    break
+            
+            if not config_file:
+                raise FileNotFoundError(f"No configuration file found. Available options: {config_files}")
+>>>>>>> Stashed changes
         
         with open(config_file, 'r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
@@ -173,8 +198,46 @@ class IoTDataBridge:
     async def _on_ingress_event(self, event: IngressEvent):
         """Handle ingress event"""
         try:
+<<<<<<< Updated upstream
             # Process through mapping layer
             await self.mapping_layer.process_event(event)
+=======
+            # Stop any existing dotnet processes (silently ignore errors)
+            try:
+                subprocess.run(["pkill", "dotnet"], check=False, capture_output=True)
+            except:
+                pass
+            
+            # Get the directory where signalr_hub is located
+            possible_paths = [
+                Path("signalr_hub"),  # current directory
+                Path("../signalr_hub"),  # parent directory
+                Path("middleware/signalr_hub"),  # middleware subdirectory
+            ]
+            
+            signalr_hub_dir = None
+            for path in possible_paths:
+                if path.exists():
+                    signalr_hub_dir = path
+                    break
+            
+            if not signalr_hub_dir:
+                print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
+                return
+            
+            # Start SignalR hub
+            result = subprocess.run([
+                "dotnet", "run"
+            ], cwd=str(signalr_hub_dir), capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print("SignalR hub started successfully")
+            else:
+                print(f"Failed to start SignalR hub: {result.stderr}")
+                
+        except FileNotFoundError:
+            print("Warning: dotnet not found. Please install .NET SDK or start SignalR hub manually.")
+>>>>>>> Stashed changes
         except Exception as e:
             self.logger.error("Error processing ingress event", 
                             event_uuid=event.uuid, 
