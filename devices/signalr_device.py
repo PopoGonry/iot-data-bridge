@@ -61,6 +61,17 @@ class IoTDevice:
             self.connection.start()
             self.logger.info("Connected to SignalR hub", device_id=self.device_id)
             
+            # Wait a moment for connection to stabilize
+            await asyncio.sleep(1)
+            
+            # Check if connection is still active
+            if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
+                if self.connection.transport._ws and self.connection.transport._ws.sock:
+                    self.logger.info("Connection is active", device_id=self.device_id)
+                else:
+                    self.logger.error("Connection is not active", device_id=self.device_id)
+                    raise ConnectionError("SignalR connection is not active")
+            
             # Join device group
             self.connection.send("JoinGroup", [group])
             self.logger.info("Joined group", device_id=self.device_id, group=group)
