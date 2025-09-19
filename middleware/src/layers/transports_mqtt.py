@@ -55,11 +55,7 @@ class MQTTTransport:
                 )
                 
             
-            self.logger.info("디바이스로 메시지 전송",
-                            device_id=device_target.device_id,
-                            topic=topic,
-                            object=device_target.object,
-                            value=device_target.value)
+            # Log removed - only file log will show Data sent
             
             return True
             
