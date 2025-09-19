@@ -41,6 +41,12 @@ public class IoTHub : Hub
         Console.WriteLine($"Client {Context.ConnectionId} left group {groupName}");
     }
 
+    public async Task SendMessage(string groupName, string target, string message)
+    {
+        await Clients.Group(groupName).SendAsync(target, message);
+        Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
+    }
+
     public async Task SendToGroup(string groupName, string target, object data)
     {
         await Clients.Group(groupName).SendAsync(target, data);
@@ -55,13 +61,13 @@ public class IoTHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        Console.WriteLine($"Client connected: {Context.ConnectionId}");
+        Console.WriteLine($"Client connected: {Context.ConnectionId} from {Context.GetHttpContext()?.Connection.RemoteIpAddress}");
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        Console.WriteLine($"Client disconnected: {Context.ConnectionId}");
+        Console.WriteLine($"Client disconnected: {Context.ConnectionId}, Exception: {exception?.Message}");
         await base.OnDisconnectedAsync(exception);
     }
 }
