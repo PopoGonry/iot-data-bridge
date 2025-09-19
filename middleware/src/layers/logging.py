@@ -59,24 +59,11 @@ class LoggingLayer(LoggingLayerInterface):
         self.logger.info("Logging layer stopped")
     
     async def log_middleware_event(self, event: MiddlewareEventLog):
-        """Log middleware event"""
+        """Log middleware event - disabled to avoid duplicate logs"""
         try:
             self._increment_processed()
-            
-            # Convert to dict for JSON serialization
-            log_data = {
-                "type": "middleware_event",
-                "timestamp": event.timestamp.isoformat(),
-                "trace_id": event.trace_id,
-                "raw": event.raw,
-                "object": event.object,
-                "send_devices": event.send_devices
-            }
-            
-            # Write to log file
-            await self._write_log(log_data)
-            
-            
+            # Do nothing - we only want device_ingest logs
+            pass
         except Exception as e:
             self._increment_error()
     
