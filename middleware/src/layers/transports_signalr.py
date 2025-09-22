@@ -210,7 +210,7 @@ class TransportsLayer(TransportsLayerInterface):
     async def start(self) -> None:
         self.is_running = True
         # Start send queue processing task
-        asyncio.create_task(self._process_send_queue())
+        asyncio.create_task(self.transport._process_send_queue())
     
     async def stop(self) -> None:
         self.is_running = False
