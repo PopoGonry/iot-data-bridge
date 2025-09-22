@@ -28,6 +28,9 @@ def signal_handler(signum, frame):
     global running
     print("\nShutting down data publisher...")
     running = False
+    # 강제 종료를 위한 추가 처리
+    import os
+    os._exit(0)
 
 
 async def publish_test_data(hub_url, group_name):
@@ -38,6 +41,7 @@ async def publish_test_data(hub_url, group_name):
         sys.exit(1)
     
     interval = 5  # 5초마다 데이터 전송
+    connection = None
     
     print(f"Starting IoT Data Publisher (SignalR)")
     print(f"Connecting to SignalR hub at {hub_url}")
@@ -47,7 +51,7 @@ async def publish_test_data(hub_url, group_name):
     print()
     
     try:
-        # SignalR Hub 연결 설정
+        # SignalR Hub 연결 설정 (단일 연결)
         connection = HubConnectionBuilder() \
             .with_url(hub_url) \
             .build()
@@ -106,6 +110,8 @@ async def publish_test_data(hub_url, group_name):
                     print(f"Error sending batch messages, trying individual messages: {e}")
                     # 배치 전송 실패 시 개별 메시지로 전송
                     for i, message_data in enumerate(batch_messages, 1):
+                        if not running:
+                            break
                         try:
                             connection.send("SendMessage", [group_name, "ingress", json.dumps(message_data)])
                         except Exception as e2:
@@ -117,17 +123,25 @@ async def publish_test_data(hub_url, group_name):
                 print(f"Waiting {interval} seconds for next cycle...")
                 print("-" * 50)
                 
-                # Wait for next cycle
-                await asyncio.sleep(interval)
-        
-        # 그룹에서 나가기
-        connection.send("LeaveGroup", [group_name])
-        connection.stop()
-        print("Data publisher stopped.")
+                # Wait for next cycle (running 체크 포함)
+                for _ in range(interval):
+                    if not running:
+                        break
+                    await asyncio.sleep(1)
         
     except Exception as e:
         print(f"Error: {e}")
         print(f"Make sure SignalR hub is running on {hub_url}")
+    finally:
+        # 안전한 종료 처리
+        if connection:
+            try:
+                print("Cleaning up SignalR connection...")
+                connection.send("LeaveGroup", [group_name])
+                connection.stop()
+                print("Data publisher stopped.")
+            except Exception as e:
+                print(f"Error during cleanup: {e}")
 
 
 async def main():
