@@ -1,10 +1,12 @@
+#!/usr/bin/env python3
 """
-Input Layer - SignalR External data reception
+IoT Data Bridge - SignalR Input Layer
 """
 
 import asyncio
 import json
 import uuid
+import time
 from typing import Optional, Callable, Any
 import structlog
 
@@ -40,7 +42,7 @@ class SignalRInputHandler:
         if not SIGNALR_AVAILABLE:
             self.logger.error("SignalR is not available. Please install signalrcore library.")
             raise ImportError("SignalR library not available")
-        
+            
         # Store reference to main event loop
         import asyncio
         self.main_loop = asyncio.get_running_loop()
@@ -112,12 +114,12 @@ class SignalRInputHandler:
                 pass
         self.logger.info("SignalR connection stopped")
     
-        def _on_message(self, *args):
-            """Handle incoming SignalR message"""
-            import time
-            self.last_message_time = time.time()
-            print(f"[DEBUG] _on_message received: {len(args)} args, time: {self.last_message_time}")
-            print(f"[DEBUG] SignalR message content: {args[:1] if args else 'No args'}")
+    def _on_message(self, *args):
+        """Handle incoming SignalR message"""
+        import time
+        self.last_message_time = time.time()
+        print(f"[DEBUG] _on_message received: {len(args)} args, time: {self.last_message_time}")
+        print(f"[DEBUG] SignalR message content: {args[:1] if args else 'No args'}")
         try:
             # SignalR messages come as a list of arguments
             if not args or len(args) < 1:
@@ -232,7 +234,6 @@ class InputLayer(InputLayerInterface):
         self.config = config
         self.mapping_layer_callback = mapping_layer_callback
         self.handler = None
-        self._task = None
         
         if not self.config.signalr:
             raise ValueError("SignalR configuration is required")
