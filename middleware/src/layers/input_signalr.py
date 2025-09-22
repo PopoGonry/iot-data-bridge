@@ -88,11 +88,21 @@ class SignalRInputHandler:
         self.is_running = False
         if self.connection:
             try:
-                # Leave group
-                self.connection.send("LeaveGroup", [self.config.group])
-                self.connection.stop()
+                # Leave group (ignore errors)
+                try:
+                    self.connection.send("LeaveGroup", [self.config.group])
+                except:
+                    pass  # Ignore leave group errors
+                
+                # Stop connection (ignore errors)
+                try:
+                    self.connection.stop()
+                except:
+                    pass  # Ignore stop errors
+                    
             except Exception as e:
-                self.logger.error("Error stopping SignalR connection", error=str(e))
+                # Silent error handling for shutdown
+                pass
         self.logger.info("SignalR connection stopped")
     
     def _on_message(self, *args):

@@ -116,10 +116,16 @@ class SignalRTransport:
         """Close SignalR connection"""
         if self.connection:
             try:
-                self.connection.stop()
+                # Stop connection (ignore errors during shutdown)
+                try:
+                    self.connection.stop()
+                except:
+                    pass  # Ignore stop errors during shutdown
+                    
                 self.logger.info("SignalR transport connection closed")
             except Exception as e:
-                self.logger.error("Error closing SignalR transport connection", error=str(e))
+                # Silent error handling for shutdown
+                pass
             finally:
                 self.connection = None
                 self.is_connected = False

@@ -287,35 +287,71 @@ class IoTDataBridge:
             await self.transports_layer.start()
             await self.logging_layer.start()
             
-            # Keep running
+            print("IoT Data Bridge started successfully!")
+            print("Press Ctrl+C to stop")
+            
+            # Keep running with timeout
             while self.is_running:
-                await asyncio.sleep(1)
+                try:
+                    await asyncio.wait_for(asyncio.sleep(1), timeout=1.0)
+                except asyncio.TimeoutError:
+                    continue
+                except Exception as e:
+                    print(f"Error in main loop: {e}")
+                    break
                 
         except KeyboardInterrupt:
-            pass
+            print("\nKeyboard interrupt received")
         except Exception as e:
             print(f"Error in main loop: {e}")
         finally:
+            print("Stopping IoT Data Bridge...")
             await self.stop()
     
     async def stop(self):
         """Stop the IoT Data Bridge"""
         self.is_running = False
         
-        # Stop all layers
-        if self.input_layer:
-            await self.input_layer.stop()
-        if self.mapping_layer:
-            await self.mapping_layer.stop()
-        if self.resolver_layer:
-            await self.resolver_layer.stop()
-        if self.transports_layer:
-            await self.transports_layer.stop()
-        if self.logging_layer:
-            await self.logging_layer.stop()
+        print("Stopping all layers...")
+        
+        # Stop all layers with timeout
+        try:
+            if self.input_layer:
+                await asyncio.wait_for(self.input_layer.stop(), timeout=5.0)
+        except Exception as e:
+            print(f"Error stopping input layer: {e}")
+        
+        try:
+            if self.mapping_layer:
+                await asyncio.wait_for(self.mapping_layer.stop(), timeout=5.0)
+        except Exception as e:
+            print(f"Error stopping mapping layer: {e}")
+        
+        try:
+            if self.resolver_layer:
+                await asyncio.wait_for(self.resolver_layer.stop(), timeout=5.0)
+        except Exception as e:
+            print(f"Error stopping resolver layer: {e}")
+        
+        try:
+            if self.transports_layer:
+                await asyncio.wait_for(self.transports_layer.stop(), timeout=5.0)
+        except Exception as e:
+            print(f"Error stopping transports layer: {e}")
+        
+        try:
+            if self.logging_layer:
+                await asyncio.wait_for(self.logging_layer.stop(), timeout=5.0)
+        except Exception as e:
+            print(f"Error stopping logging layer: {e}")
         
         # Stop SignalR hub
-        self._stop_signalr_hub()
+        try:
+            self._stop_signalr_hub()
+        except Exception as e:
+            print(f"Error stopping SignalR hub: {e}")
+        
+        print("IoT Data Bridge stopped successfully!")
 
 
 async def main():
@@ -329,7 +365,16 @@ async def main():
     
     # Setup signal handlers
     def signal_handler(signum, frame):
-        asyncio.create_task(bridge.stop())
+        print(f"\nReceived signal {signum}, shutting down...")
+        bridge.is_running = False
+        # Force stop all layers
+        try:
+            if bridge.input_layer:
+                bridge.input_layer.is_running = False
+            if bridge.transports_layer:
+                bridge.transports_layer.is_running = False
+        except:
+            pass
     
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
