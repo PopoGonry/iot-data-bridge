@@ -157,18 +157,7 @@ class SignalRInputHandler:
             # First argument should be the message content
             message = args[0]
             
-            # Handle batch messages (array of messages)
-            if isinstance(message, list):
-                # Process each message in the batch
-                for msg in message:
-                    if isinstance(msg, str):
-                        payload = json.loads(msg)
-                    else:
-                        payload = msg
-                    self._process_single_message(payload)
-                return
-            
-            # Handle single message
+            # Handle single message (SignalR Hub now sends individual messages)
             if isinstance(message, str):
                 payload = json.loads(message)
             else:

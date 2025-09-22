@@ -78,14 +78,20 @@ public class IoTHub : Hub
             // Route batch messages from data_sources to iot_clients (middleware)
             if (groupName == "data_sources" && target == "ingress")
             {
-                // Send all messages to iot_clients group
-                await Clients.Group("iot_clients").SendAsync("ingress", batchMessages);
+                // Send each message individually to iot_clients group
+                foreach (var message in batchMessages)
+                {
+                    await Clients.Group("iot_clients").SendAsync("ingress", message);
+                }
                 Console.WriteLine($"Routed {batchMessages.Length} batch messages from data_sources to iot_clients");
             }
             else
             {
-                // Send all messages to target group
-                await Clients.Group(groupName).SendAsync(target, batchMessages);
+                // Send each message individually to target group
+                foreach (var message in batchMessages)
+                {
+                    await Clients.Group(groupName).SendAsync(target, message);
+                }
                 Console.WriteLine($"Sent {batchMessages.Length} batch messages to group {groupName}, target {target}");
             }
         }
