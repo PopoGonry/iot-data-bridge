@@ -52,7 +52,7 @@ class ResolverLayer(ResolverLayerInterface):
                 target_devices=target_devices
             )
             
-            # Log middleware event
+            # Log middleware event (if logging callback is available)
             await self._log_middleware_event(event, target_devices)
             
             # Forward to transports layer
