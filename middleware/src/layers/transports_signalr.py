@@ -5,6 +5,7 @@ Transports Layer - SignalR Sends resolved events to target devices
 import asyncio
 import json
 import uuid
+import traceback
 from datetime import datetime
 from typing import Optional, Callable, List, Any
 import structlog
@@ -226,41 +227,53 @@ class TransportsLayer(TransportsLayerInterface):
             await asyncio.gather(*self.transport.active_sends, return_exceptions=True)
     
     async def send_to_devices(self, event: ResolvedEvent) -> LayerResult:
-        self._increment_processed()
-        device_targets = []
-        for device_id in event.target_devices:
-            transport_config = TransportConfig(
-                type=TransportType.SIGNALR,
-                config={'group': device_id, 'target': 'ingress'}
+        try:
+            self._increment_processed()
+            device_targets = []
+            for device_id in event.target_devices:
+                transport_config = TransportConfig(
+                    type=TransportType.SIGNALR,
+                    config={'group': device_id, 'target': 'ingress'}
+                )
+                device_target = DeviceTarget(device_id=device_id, transport_config=transport_config, object=event.object, value=event.value)
+                device_targets.append(device_target)
+            
+            success_count = 0
+            for device_target in device_targets:
+                try:
+                    # 큐에 추가하고 즉시 성공으로 처리 (비동기 처리)
+                    success = await self.transport.send_to_device(device_target)
+                    if success:
+                        success_count += 1
+                        
+                        # Log device ingest (비동기)
+                        ingest_log = DeviceIngestLog(
+                            trace_id=event.trace_id,
+                            device_id=device_target.device_id,
+                            object=device_target.object,
+                            value=device_target.value
+                        )
+                        asyncio.create_task(self.device_ingest_callback(ingest_log))
+                    else:
+                        self.logger.warning("TRANSPORTS LAYER: Failed to queue device delivery", 
+                                          trace_id=event.trace_id,
+                                          device_id=device_target.device_id)
+                        
+                except Exception as e:
+                    self.logger.error("TRANSPORTS LAYER: Error queuing device delivery",
+                                    trace_id=event.trace_id,
+                                    device_id=device_target.device_id,
+                                    error=str(e))
+            
+            return LayerResult(success=success_count > 0, processed_count=len(device_targets), error_count=len(device_targets) - success_count, data=device_targets)
+        except Exception as e:
+            self.logger.error("TRANSPORTS LAYER: Critical error in send_to_devices", 
+                            trace_id=event.trace_id,
+                            error=str(e),
+                            traceback=traceback.format_exc())
+            return LayerResult(
+                success=False,
+                processed_count=0,
+                error_count=len(event.target_devices) if hasattr(event, 'target_devices') else 1,
+                data=[]
             )
-            device_target = DeviceTarget(device_id=device_id, transport_config=transport_config, object=event.object, value=event.value)
-            device_targets.append(device_target)
-        
-        success_count = 0
-        for device_target in device_targets:
-            try:
-                # 큐에 추가하고 즉시 성공으로 처리 (비동기 처리)
-                success = await self.transport.send_to_device(device_target)
-                if success:
-                    success_count += 1
-                    
-                    # Log device ingest (비동기)
-                    ingest_log = DeviceIngestLog(
-                        trace_id=event.trace_id,
-                        device_id=device_target.device_id,
-                        object=device_target.object,
-                        value=device_target.value
-                    )
-                    asyncio.create_task(self.device_ingest_callback(ingest_log))
-                else:
-                    self.logger.warning("TRANSPORTS LAYER: Failed to queue device delivery", 
-                                      trace_id=event.trace_id,
-                                      device_id=device_target.device_id)
-                    
-            except Exception as e:
-                self.logger.error("TRANSPORTS LAYER: Error queuing device delivery",
-                                trace_id=event.trace_id,
-                                device_id=device_target.device_id,
-                                error=str(e))
-        
-        return LayerResult(success=success_count > 0, processed_count=len(device_targets), error_count=len(device_targets) - success_count, data=device_targets)
