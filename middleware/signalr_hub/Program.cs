@@ -53,6 +53,27 @@ public class IoTHub : Hub
         Console.WriteLine($"Sent to group {groupName}, target {target}: {data}");
     }
 
+    public async Task SendBatchMessages(string groupName, string target, string batchMessagesJson)
+    {
+        try
+        {
+            // 배치 메시지를 파싱하여 각각 전송
+            var batchMessages = System.Text.Json.JsonSerializer.Deserialize<object[]>(batchMessagesJson);
+            
+            foreach (var message in batchMessages)
+            {
+                await Clients.Group(groupName).SendAsync(target, message);
+            }
+            
+            Console.WriteLine($"Sent {batchMessages.Length} batch messages to group {groupName}, target {target}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing batch messages: {ex.Message}");
+            throw;
+        }
+    }
+
     public override async Task OnConnectedAsync()
     {
         Console.WriteLine($"Client connected: {Context.ConnectionId} from {Context.GetHttpContext()?.Connection.RemoteIpAddress}");
