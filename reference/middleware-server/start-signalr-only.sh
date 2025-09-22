@@ -121,11 +121,18 @@ echo "Starting SignalR Hub..."
 if command -v dotnet &> /dev/null; then
     cd signalr_hub
     dotnet run &
+    HUB_PID=$!
     cd ..
-    echo "SignalR Hub started"
+    echo "SignalR Hub started (PID: $HUB_PID)"
     
     # Wait a moment for SignalR Hub to start
     sleep 5
+    
+    # Check if SignalR Hub is running
+    if ! kill -0 $HUB_PID 2>/dev/null; then
+        echo "Error: SignalR Hub failed to start"
+        exit 1
+    fi
     
     # Start IoT Data Bridge (SignalR Only)
     echo "Starting IoT Data Bridge (SignalR Only)..."
@@ -139,10 +146,20 @@ if command -v dotnet &> /dev/null; then
         echo "Error: Python not found. Please install Python 3.8 or higher."
         exit 1
     fi
+    
+    echo
+    echo "Stopping services..."
+    
+    # Stop SignalR Hub
+    if kill -0 $HUB_PID 2>/dev/null; then
+        echo "Stopping SignalR Hub (PID: $HUB_PID)..."
+        kill $HUB_PID
+        wait $HUB_PID 2>/dev/null
+    fi
+    
+    echo "All services stopped."
 else
     echo "Error: dotnet not found. Please install .NET SDK:"
     echo "https://dotnet.microsoft.com/download"
     exit 1
 fi
-
-echo "All services started!"

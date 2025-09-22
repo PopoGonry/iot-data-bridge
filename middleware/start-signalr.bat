@@ -74,9 +74,25 @@ echo.
 echo Starting IoT Data Bridge Middleware (SignalR)...
 echo.
 
+REM Start SignalR Hub in background
+echo Starting SignalR Hub...
+cd signalr_hub
+start /B dotnet run
+cd ..
+
+REM Wait for SignalR Hub to start
+echo Waiting for SignalR Hub to start...
+timeout /t 5 /nobreak > nul
+
+echo SignalR Hub started successfully
+
 REM Start the middleware
+echo Starting IoT Data Bridge Middleware...
 python src/main_signalr.py
 
 echo.
 echo Middleware stopped.
+echo.
+echo Note: SignalR Hub is still running in the background.
+echo To stop it, check Task Manager or run: taskkill /f /im dotnet.exe
 pause

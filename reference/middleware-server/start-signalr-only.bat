@@ -78,9 +78,15 @@ cd ..
 REM Wait a moment for SignalR Hub to start
 timeout /t 5 /nobreak > nul
 
+echo SignalR Hub started successfully
+
 REM Start IoT Data Bridge (SignalR Only)
 echo Starting IoT Data Bridge (SignalR Only)...
 python src/main.py --config config/app-signalr.yaml
 
-echo All services started!
+echo.
+echo Middleware stopped.
+echo.
+echo Note: SignalR Hub is still running in the background.
+echo To stop it, check Task Manager or run: taskkill /f /im dotnet.exe
 pause
