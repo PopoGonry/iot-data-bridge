@@ -35,6 +35,7 @@ class SignalRTransport:
         self.connection_retry_count = 0
         self.max_retries = 3
         self.retry_delay = 2
+        self.is_running = False  # 실행 상태 추가
         self.send_queue = asyncio.Queue(maxsize=500)  # 전송 큐
         self.active_sends = set()  # 활성 전송 태스크 추적
     
@@ -53,7 +54,7 @@ class SignalRTransport:
     
     async def _process_send_queue(self):
         """Process send queue with timeout and error handling"""
-        while True:
+        while self.is_running:  # 중단 조건 추가
             try:
                 # 큐에서 전송 요청 가져오기
                 device_target = await asyncio.wait_for(self.send_queue.get(), timeout=1.0)
@@ -209,11 +210,15 @@ class TransportsLayer(TransportsLayerInterface):
     
     async def start(self) -> None:
         self.is_running = True
+        self.transport.is_running = True  # Transport도 실행 상태로 설정
+        # Ensure transport connection is established first
+        await self.transport._ensure_connection()
         # Start send queue processing task
         asyncio.create_task(self.transport._process_send_queue())
     
     async def stop(self) -> None:
         self.is_running = False
+        self.transport.is_running = False  # Transport도 중지 상태로 설정
         # 모든 활성 전송 태스크 정리
         for task in self.transport.active_sends:
             task.cancel()
