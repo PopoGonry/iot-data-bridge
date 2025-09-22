@@ -112,11 +112,12 @@ class SignalRInputHandler:
                 pass
         self.logger.info("SignalR connection stopped")
     
-    def _on_message(self, *args):
-        """Handle incoming SignalR message"""
-        import time
-        self.last_message_time = time.time()
-        print(f"[DEBUG] _on_message received: {len(args)} args, time: {self.last_message_time}")
+        def _on_message(self, *args):
+            """Handle incoming SignalR message"""
+            import time
+            self.last_message_time = time.time()
+            print(f"[DEBUG] _on_message received: {len(args)} args, time: {self.last_message_time}")
+            print(f"[DEBUG] SignalR message content: {args[:1] if args else 'No args'}")
         try:
             # SignalR messages come as a list of arguments
             if not args or len(args) < 1:

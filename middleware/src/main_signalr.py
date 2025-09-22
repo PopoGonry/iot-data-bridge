@@ -333,6 +333,17 @@ class IoTDataBridge:
                                 if hasattr(handler.connection, 'transport') and hasattr(handler.connection.transport, '_ws'):
                                     if handler.connection.transport._ws and handler.connection.transport._ws.sock:
                                         print(f"[DEBUG] SignalR connection: ACTIVE")
+                                        # Check if connection is actually receiving data
+                                        if time_since_last_msg > 30:  # More than 30 seconds without data
+                                            print(f"[DEBUG] WARNING: No data received for {time_since_last_msg:.1f}s - connection may be stuck")
+                                            # Try to trigger reconnection
+                                            if hasattr(handler, '_attempt_reconnection'):
+                                                print(f"[DEBUG] Attempting to reconnect SignalR input connection...")
+                                                try:
+                                                    # Schedule reconnection in the event loop
+                                                    asyncio.create_task(handler._attempt_reconnection())
+                                                except Exception as e:
+                                                    print(f"[DEBUG] Failed to schedule reconnection: {e}")
                                     else:
                                         print(f"[DEBUG] SignalR connection: INACTIVE - WebSocket closed")
                                 else:
