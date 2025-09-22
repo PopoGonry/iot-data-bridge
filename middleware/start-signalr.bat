@@ -34,15 +34,40 @@ if %ERRORLEVEL% neq 0 (
 
 REM Check if requirements are installed
 echo Checking Python dependencies...
+echo Checking for required packages: signalrcore, pydantic, structlog, pyyaml...
+
+REM Check each required package
+set MISSING_PACKAGES=0
 pip show signalrcore >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo Installing Python dependencies...
-    pip install -r requirements.txt
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show pydantic >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show structlog >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show pyyaml >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+if %MISSING_PACKAGES%==1 (
+    echo Installing missing dependencies...
+    echo Using requirements-signalr.txt for SignalR-specific dependencies...
+    pip install -r requirements-signalr.txt
     if %ERRORLEVEL% neq 0 (
-        echo Error: Failed to install Python dependencies
-        pause
-        exit /b 1
+        echo Error: Failed to install dependencies from requirements-signalr.txt
+        echo Trying fallback to requirements.txt...
+        pip install -r requirements.txt
+        if %ERRORLEVEL% neq 0 (
+            echo Error: Failed to install dependencies
+            echo Please check your Python environment and internet connection
+            pause
+            exit /b 1
+        )
     )
+    echo Dependencies installed successfully!
+) else (
+    echo All required dependencies are already installed.
 )
 
 echo.

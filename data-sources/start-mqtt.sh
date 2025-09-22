@@ -19,13 +19,34 @@ fi
 
 # Check if requirements are installed
 echo "Checking Python dependencies..."
+echo "Checking for required packages: aiomqtt, signalrcore, pyyaml..."
+
+# Check each required package
+MISSING_PACKAGES=0
 if ! python3 -c "import aiomqtt" &> /dev/null; then
-    echo "Installing dependencies..."
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import signalrcore" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import yaml" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if [ $MISSING_PACKAGES -eq 1 ]; then
+    echo "Installing missing dependencies..."
     pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "Error: Failed to install dependencies"
+        echo "Please check your Python environment and internet connection"
+        echo "You may need to run: pip3 install --upgrade pip"
         exit 1
     fi
+    echo "Dependencies installed successfully!"
+else
+    echo "All required dependencies are already installed."
 fi
 
 echo

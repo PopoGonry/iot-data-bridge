@@ -20,15 +20,32 @@ if %ERRORLEVEL% neq 0 (
 
 REM Check if requirements are installed
 echo Checking dependencies...
+echo Checking for required packages: aiomqtt, signalrcore, pyyaml...
+
+REM Check each required package
+set MISSING_PACKAGES=0
 pip show aiomqtt >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo Installing dependencies...
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show signalrcore >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show pyyaml >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+if %MISSING_PACKAGES%==1 (
+    echo Installing missing dependencies...
     pip install -r requirements.txt
     if %ERRORLEVEL% neq 0 (
         echo Error: Failed to install dependencies
+        echo Please check your Python environment and internet connection
+        echo You may need to run: pip install --upgrade pip
         pause
         exit /b 1
     )
+    echo Dependencies installed successfully!
+) else (
+    echo All required dependencies are already installed.
 )
 
 echo.

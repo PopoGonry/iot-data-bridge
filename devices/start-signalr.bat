@@ -22,15 +22,35 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo Checking Python dependencies...
-python -c "import signalrcore" 2>nul
-if %errorlevel% neq 0 (
-    echo Installing Python dependencies...
+echo Checking for required packages: signalrcore, aiomqtt, pyyaml, structlog...
+
+REM Check each required package
+set MISSING_PACKAGES=0
+pip show signalrcore >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show aiomqtt >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show pyyaml >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+pip show structlog >nul 2>&1
+if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
+
+if %MISSING_PACKAGES%==1 (
+    echo Installing missing dependencies...
     pip install -r requirements.txt
-    if %errorlevel% neq 0 (
+    if %ERRORLEVEL% neq 0 (
         echo Error: Failed to install Python dependencies
+        echo Please check your Python environment and internet connection
+        echo You may need to run: pip install --upgrade pip
         pause
         exit /b 1
     )
+    echo Dependencies installed successfully!
+) else (
+    echo All required dependencies are already installed.
 )
 
 echo.

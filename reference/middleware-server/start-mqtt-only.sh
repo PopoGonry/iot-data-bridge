@@ -4,6 +4,18 @@
 # Change to script directory
 cd "$(dirname "$0")"
 
+echo "========================================"
+echo "   IoT Data Bridge - Middleware (MQTT Only)"
+echo "========================================"
+echo
+
+# Check if Python is available
+if ! command -v python3 &> /dev/null; then
+    echo "Error: Python3 is not installed or not in PATH"
+    echo "Please install Python 3.11+ and try again"
+    exit 1
+fi
+
 echo "Starting IoT Data Bridge Middleware Server (MQTT Only)..."
 echo "Working directory: $(pwd)"
 
@@ -43,6 +55,42 @@ if pgrep mosquitto > /dev/null; then
 else
     echo "Error: MQTT broker failed to start"
     exit 1
+fi
+
+# Check if requirements are installed
+echo "Checking Python dependencies..."
+echo "Checking for required packages: aiomqtt, pydantic, structlog, pyyaml..."
+
+# Check each required package
+MISSING_PACKAGES=0
+if ! python3 -c "import aiomqtt" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import pydantic" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import structlog" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import yaml" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if [ $MISSING_PACKAGES -eq 1 ]; then
+    echo "Installing missing dependencies..."
+    pip3 install -r requirements.txt
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to install dependencies"
+        echo "Please check your Python environment and internet connection"
+        echo "You may need to run: pip3 install --upgrade pip"
+        exit 1
+    fi
+    echo "Dependencies installed successfully!"
+else
+    echo "All required dependencies are already installed."
 fi
 
 # Wait a moment for MQTT broker to start

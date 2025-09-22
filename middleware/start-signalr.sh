@@ -68,13 +68,44 @@ fi
 
 # Check if requirements are installed
 echo "Checking Python dependencies..."
+echo "Checking for required packages: signalrcore, pydantic, structlog, pyyaml..."
+
+# Check each required package
+MISSING_PACKAGES=0
 if ! python3 -c "import signalrcore" &> /dev/null; then
-    echo "Installing Python dependencies..."
-    pip3 install -r requirements.txt
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import pydantic" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import structlog" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! python3 -c "import yaml" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if [ $MISSING_PACKAGES -eq 1 ]; then
+    echo "Installing missing dependencies..."
+    echo "Using requirements-signalr.txt for SignalR-specific dependencies..."
+    pip3 install -r requirements-signalr.txt
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to install Python dependencies"
-        exit 1
+        echo "Error: Failed to install dependencies from requirements-signalr.txt"
+        echo "Trying fallback to requirements.txt..."
+        pip3 install -r requirements.txt
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to install dependencies"
+            echo "Please check your Python environment and internet connection"
+            echo "You may need to run: pip3 install --upgrade pip"
+            exit 1
+        fi
     fi
+    echo "Dependencies installed successfully!"
+else
+    echo "All required dependencies are already installed."
 fi
 
 echo

@@ -48,16 +48,38 @@ echo "Using Python: $PYTHON_CMD"
 
 # Check if requirements are installed
 echo "Checking dependencies..."
-$PYTHON_CMD -c "import aiomqtt" 2>/dev/null
-if [ $? -ne 0 ]; then
-    echo "Installing dependencies..."
-    pip install -r requirements.txt
+echo "Checking for required packages: aiomqtt, signalrcore, pyyaml, structlog..."
+
+# Check each required package
+MISSING_PACKAGES=0
+if ! $PYTHON_CMD -c "import aiomqtt" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! $PYTHON_CMD -c "import signalrcore" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! $PYTHON_CMD -c "import yaml" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if ! $PYTHON_CMD -c "import structlog" &> /dev/null; then
+    MISSING_PACKAGES=1
+fi
+
+if [ $MISSING_PACKAGES -eq 1 ]; then
+    echo "Installing missing dependencies..."
+    pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "Error: Failed to install dependencies"
+        echo "Please check your Python environment and internet connection"
+        echo "You may need to run: pip3 install --upgrade pip"
         exit 1
     fi
+    echo "Dependencies installed successfully!"
 else
-    echo "Dependencies are already installed"
+    echo "All required dependencies are already installed."
 fi
 
 # Check if device.py exists
