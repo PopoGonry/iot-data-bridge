@@ -1,12 +1,12 @@
 #!/bin/bash
-# Middleware Start Script for Linux/macOS - SignalR Only
+# Middleware Start Script for Linux/macOS - SignalR Only (Integrated)
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "========================================"
-echo "   IoT Data Bridge - Middleware (SignalR)"
+echo "   IoT Data Bridge - Middleware (SignalR) - Integrated"
 echo "========================================"
 echo
 
@@ -109,46 +109,76 @@ else
 fi
 
 echo
-echo "Starting IoT Data Bridge Middleware (SignalR)..."
+echo "Starting IoT Data Bridge Middleware (SignalR) - Integrated..."
 echo
 
-# Check if SignalR Hub is already running
-if netstat -tlnp 2>/dev/null | grep -q ":5000 "; then
-    echo "SignalR Hub is already running on port 5000"
-else
-    echo "==============================================="
-    echo "  SignalR Hub is not running!"
-    echo "==============================================="
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+# Function to cleanup on exit
+cleanup() {
     echo
-    echo "Please start SignalR Hub first in another terminal:"
-    echo
-    echo "  Terminal 1:"
-    echo "    cd $(pwd)/signalr_hub"
-    echo "    dotnet run"
-    echo
-    echo "  Terminal 2:"
-    echo "    cd $(pwd)"
-    echo "    bash start-signalr.sh"
-    echo
-    echo "Or use the integrated script:"
-    echo "    bash start-signalr-integrated.sh"
-    echo
-    echo "==============================================="
+    echo "Stopping services..."
+    
+    # Stop SignalR Hub
+    if [ ! -z "$HUB_PID" ] && kill -0 $HUB_PID 2>/dev/null; then
+        echo "Stopping SignalR Hub (PID: $HUB_PID)..."
+        kill $HUB_PID
+        wait $HUB_PID 2>/dev/null
+    fi
+    
+    echo "All services stopped."
+    exit 0
+}
+
+# Set up signal handlers
+trap cleanup SIGINT SIGTERM
+
+# Start SignalR Hub in background
+echo "Starting SignalR Hub..."
+cd signalr_hub
+nohup dotnet run > ../logs/signalr_hub.log 2>&1 &
+HUB_PID=$!
+cd ..
+
+# Wait for SignalR Hub to start
+echo "Waiting for SignalR Hub to start..."
+sleep 3
+
+# Check if SignalR Hub is running and listening on port 5000
+for i in {1..15}; do
+    if netstat -tlnp 2>/dev/null | grep -q ":5000 "; then
+        echo "SignalR Hub started successfully (PID: $HUB_PID)"
+        break
+    elif ! kill -0 $HUB_PID 2>/dev/null; then
+        echo "Error: SignalR Hub failed to start"
+        echo "Check logs/signalr_hub.log for details:"
+        if [ -f logs/signalr_hub.log ]; then
+            tail -20 logs/signalr_hub.log
+        fi
+        exit 1
+    else
+        echo "Waiting for SignalR Hub to be ready... ($i/15)"
+        sleep 1
+    fi
+done
+
+# Final check
+if ! netstat -tlnp 2>/dev/null | grep -q ":5000 "; then
+    echo "Error: SignalR Hub is not listening on port 5000"
+    echo "Check logs/signalr_hub.log for details:"
+    if [ -f logs/signalr_hub.log ]; then
+        tail -20 logs/signalr_hub.log
+    fi
+    kill $HUB_PID 2>/dev/null
     exit 1
 fi
 
 # Start the middleware
 echo "Starting IoT Data Bridge Middleware..."
+echo "Press Ctrl+C to stop all services"
+echo
+
 python3 src/main_signalr.py
 
-echo
-echo "Stopping services..."
-
-# Stop SignalR Hub
-if kill -0 $HUB_PID 2>/dev/null; then
-    echo "Stopping SignalR Hub (PID: $HUB_PID)..."
-    kill $HUB_PID
-    wait $HUB_PID 2>/dev/null
-fi
-
-echo "All services stopped."
+# Cleanup will be handled by the signal handler
