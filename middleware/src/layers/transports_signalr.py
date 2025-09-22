@@ -32,25 +32,15 @@ class SignalRTransport:
         self.config = config
         self.logger = structlog.get_logger("signalr_transport")
         self.connection: Optional[BaseHubConnection] = None
+        self.connection_retry_count = 0
+        self.max_retries = 3
+        self.retry_delay = 2
     
     async def send_to_device(self, device_target: DeviceTarget) -> bool:
         """Send data to device via SignalR"""
         try:
-            if not self.connection:
-                self.connection = HubConnectionBuilder() \
-                    .with_url(self.config.url) \
-                    .build()
-                
-                # Add event handlers to prevent undefined errors
-                self.connection.on_open(lambda: self.logger.debug("SignalR transport connection opened"))
-                self.connection.on_close(lambda: self.logger.debug("SignalR transport connection closed"))
-                self.connection.on_error(lambda data: self.logger.error("SignalR transport connection error", error=data))
-                
-                self.connection.start()
-                
-                # Wait for connection to stabilize
-                import time
-                time.sleep(1)
+            if not self.connection or not self._is_connection_active():
+                await self._ensure_connection()
             
             # Get device-specific configuration
             device_config = device_target.transport_config.config
@@ -74,6 +64,77 @@ class SignalRTransport:
                             device_id=device_target.device_id,
                             error=str(e))
             return False
+    
+    def _is_connection_active(self) -> bool:
+        """Check if SignalR connection is active"""
+        if not self.connection:
+            return False
+        
+        try:
+            if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
+                return self.connection.transport._ws and self.connection.transport._ws.sock
+        except Exception:
+            pass
+        
+        return False
+    
+    async def _ensure_connection(self):
+        """Ensure SignalR connection is established"""
+        if self.connection and self._is_connection_active():
+            return
+        
+        retry_count = 0
+        while retry_count < self.max_retries:
+            try:
+                if self.connection:
+                    try:
+                        self.connection.stop()
+                    except Exception:
+                        pass
+                
+                self.connection = HubConnectionBuilder() \
+                    .with_url(self.config.url) \
+                    .build()
+                
+                # Add event handlers
+                self.connection.on_open(self._on_connection_open)
+                self.connection.on_close(self._on_connection_close)
+                self.connection.on_error(self._on_connection_error)
+                
+                self.connection.start()
+                
+                # Wait for connection to stabilize
+                await asyncio.sleep(1)
+                
+                if self._is_connection_active():
+                    self.connection_retry_count = 0
+                    self.logger.info("SignalR transport connection established")
+                    return
+                else:
+                    raise ConnectionError("Connection not active after start")
+                    
+            except Exception as e:
+                retry_count += 1
+                self.logger.warning(f"Failed to establish SignalR transport connection (attempt {retry_count}/{self.max_retries}): {e}")
+                
+                if retry_count < self.max_retries:
+                    await asyncio.sleep(self.retry_delay)
+                else:
+                    self.logger.error("Max retries exceeded for SignalR transport connection")
+                    raise
+    
+    def _on_connection_open(self):
+        """Handle connection open event"""
+        self.logger.debug("SignalR transport connection opened")
+        self.connection_retry_count = 0
+    
+    def _on_connection_close(self):
+        """Handle connection close event"""
+        self.logger.warning("SignalR transport connection closed")
+    
+    def _on_connection_error(self, data):
+        """Handle connection error event"""
+        self.logger.error("SignalR transport connection error", error=data)
 
 
 class TransportsLayer(TransportsLayerInterface):

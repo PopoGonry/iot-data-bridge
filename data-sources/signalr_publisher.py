@@ -145,8 +145,8 @@ async def main():
     # Build SignalR URL
     hub_url = f"http://{signalr_host}:{signalr_port}/hub"
     
-    # Group name is always iot_clients for data sources
-    group_name = "iot_clients"
+    # Group name for data sources (separate from middleware)
+    group_name = "data_sources"
     
     print(f"SignalR Host: {signalr_host}")
     print(f"SignalR Port: {signalr_port}")

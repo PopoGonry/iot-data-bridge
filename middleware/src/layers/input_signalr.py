@@ -32,6 +32,9 @@ class SignalRInputHandler:
         self.logger = structlog.get_logger("signalr_input")
         self.connection: Optional[BaseHubConnection] = None
         self.is_running = False
+        self.connection_retry_count = 0
+        self.max_retries = 5
+        self.retry_delay = 5
     
     async def start(self):
         """Start SignalR connection"""
@@ -49,19 +52,18 @@ class SignalRInputHandler:
             self.connection.on("ingress", self._on_message)
             
             # Register connection event handlers
-            self.connection.on_open(lambda: None)
-            self.connection.on_close(lambda: None)
-            self.connection.on_error(lambda data: None)
+            self.connection.on_open(self._on_connection_open)
+            self.connection.on_close(self._on_connection_close)
+            self.connection.on_error(self._on_connection_error)
             
             # Wait a moment for SignalR hub to be fully ready
-            import time
-            time.sleep(3)
+            await asyncio.sleep(3)
             
             # Start connection
             self.connection.start()
             
             # Wait for connection to stabilize
-            time.sleep(2)
+            await asyncio.sleep(2)
             
             # Check if connection is still active
             if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
@@ -81,7 +83,16 @@ class SignalRInputHandler:
             print(f"Traceback: {traceback.format_exc()}")
             self.logger.error("SignalR connection error", error=str(e))
             self.logger.error("SignalR connection traceback", traceback=traceback.format_exc())
-            raise
+            
+            # Try to reconnect if we haven't exceeded max retries
+            if self.connection_retry_count < self.max_retries:
+                self.connection_retry_count += 1
+                self.logger.info(f"Attempting to reconnect... (attempt {self.connection_retry_count}/{self.max_retries})")
+                await asyncio.sleep(self.retry_delay)
+                return await self.start()
+            else:
+                self.logger.error("Max reconnection attempts exceeded")
+                raise
     
     async def stop(self):
         """Stop SignalR connection"""
@@ -95,6 +106,47 @@ class SignalRInputHandler:
                 self.logger.error("Error stopping SignalR connection", error=str(e))
         self.logger.info("SignalR connection stopped")
     
+    def _on_connection_open(self):
+        """Handle connection open event"""
+        self.logger.info("SignalR connection opened")
+        self.connection_retry_count = 0  # Reset retry count on successful connection
+    
+    def _on_connection_close(self):
+        """Handle connection close event"""
+        self.logger.warning("SignalR connection closed")
+        if self.is_running:
+            # Try to reconnect if we're still supposed to be running
+            asyncio.create_task(self._attempt_reconnect())
+    
+    def _on_connection_error(self, data):
+        """Handle connection error event"""
+        self.logger.error("SignalR connection error", error=data)
+        if self.is_running:
+            # Try to reconnect on error
+            asyncio.create_task(self._attempt_reconnect())
+    
+    async def _attempt_reconnect(self):
+        """Attempt to reconnect to SignalR hub"""
+        if not self.is_running or self.connection_retry_count >= self.max_retries:
+            return
+        
+        self.connection_retry_count += 1
+        self.logger.info(f"Attempting to reconnect... (attempt {self.connection_retry_count}/{self.max_retries})")
+        
+        try:
+            await asyncio.sleep(self.retry_delay)
+            await self.start()
+        except Exception as e:
+            self.logger.error("Reconnection failed", error=str(e))
+    
+    def _on_callback_done(self, task):
+        """Handle callback task completion"""
+        try:
+            if task.exception():
+                self.logger.error("Callback task failed", error=str(task.exception()))
+        except Exception as e:
+            self.logger.error("Error in callback completion handler", error=str(e))
+    
     def _on_message(self, *args):
         """Handle incoming SignalR message"""
         try:
@@ -105,17 +157,37 @@ class SignalRInputHandler:
             # First argument should be the message content
             message = args[0]
             
-            # Parse message
+            # Handle batch messages (array of messages)
+            if isinstance(message, list):
+                # Process each message in the batch
+                for msg in message:
+                    if isinstance(msg, str):
+                        payload = json.loads(msg)
+                    else:
+                        payload = msg
+                    self._process_single_message(payload)
+                return
+            
+            # Handle single message
             if isinstance(message, str):
                 payload = json.loads(message)
-            elif isinstance(message, list) and len(message) > 0:
-                # If message is a list, take the first element
-                if isinstance(message[0], str):
-                    payload = json.loads(message[0])
-                else:
-                    payload = message[0]
             else:
                 payload = message
+            
+            self._process_single_message(payload)
+            
+        except json.JSONDecodeError as e:
+            self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
+        except Exception as e:
+            import traceback
+            print(f"Error processing SignalR message: {e}")
+            print(f"Message: {message}")
+            print(f"Traceback: {traceback.format_exc()}")
+            self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
+    
+    def _process_single_message(self, payload):
+        """Process a single message payload"""
+        try:
             
             # Create ingress event
             trace_id = str(uuid.uuid4())
@@ -130,23 +202,21 @@ class SignalRInputHandler:
             )
             
             # Schedule the callback as a task
-            import asyncio
             try:
                 # Try to get the current event loop
                 loop = asyncio.get_running_loop()
-                loop.create_task(self.callback(ingress_event))
+                task = loop.create_task(self.callback(ingress_event))
+                # Add error handling for the task
+                task.add_done_callback(self._on_callback_done)
             except RuntimeError:
                 # If no event loop is running, create a new one
                 asyncio.run(self.callback(ingress_event))
-            
-        except json.JSONDecodeError as e:
-            self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
+                
         except Exception as e:
             import traceback
-            print(f"Error processing SignalR message: {e}")
-            print(f"Message: {message}")
+            print(f"Error processing single message: {e}")
             print(f"Traceback: {traceback.format_exc()}")
-            self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
+            self.logger.error("Error processing single message", error=str(e), traceback=traceback.format_exc())
 
 
 class InputLayer(InputLayerInterface):

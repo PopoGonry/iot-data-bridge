@@ -233,8 +233,7 @@ class IoTDataBridge:
             ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
             # Give it a moment to start
-            import time
-            time.sleep(2)
+            await asyncio.sleep(2)
             
             # Check if process is still running
             if result.poll() is None:
