@@ -39,6 +39,8 @@ class SignalRInputHandler:
     
     async def start(self):
         """Start SignalR connection"""
+        print(f"[DEBUG] SignalRInputHandler.start() called - URL: {self.config.url}, Group: {self.config.group}")
+        
         if not SIGNALR_AVAILABLE:
             self.logger.error("SignalR is not available. Please install signalrcore library.")
             raise ImportError("SignalR library not available")
@@ -47,42 +49,64 @@ class SignalRInputHandler:
         import asyncio
         self.main_loop = asyncio.get_running_loop()
         print(f"[DEBUG] Stored main loop reference: {self.main_loop}")
+        print(f"[DEBUG] Main loop is running: {self.main_loop.is_running()}")
+        print(f"[DEBUG] Main loop is closed: {self.main_loop.is_closed()}")
             
         try:
+            print(f"[DEBUG] Building SignalR connection to: {self.config.url}")
             # Build connection
             self.connection = HubConnectionBuilder() \
                 .with_url(self.config.url) \
                 .build()
+            print(f"[DEBUG] SignalR connection object created: {self.connection}")
             
             # Register message handler for ingress messages
+            print(f"[DEBUG] Registering message handler for 'ingress' events")
             self.connection.on("ingress", self._on_message)
             
             # Register connection event handlers
-            self.connection.on_open(lambda: self.logger.debug("SignalR input connection opened"))
-            self.connection.on_close(lambda: self._on_connection_close())
-            self.connection.on_error(lambda data: self.logger.error("SignalR input connection error", error=data))
+            print(f"[DEBUG] Registering connection event handlers")
+            self.connection.on_open(lambda: print("[DEBUG] SignalR connection opened successfully"))
+            self.connection.on_close(lambda: print("[DEBUG] SignalR connection closed - triggering reconnection"))
+            self.connection.on_error(lambda data: print(f"[DEBUG] SignalR connection error: {data}"))
             
             # Wait a moment for SignalR hub to be fully ready
+            print(f"[DEBUG] Waiting 3 seconds for SignalR hub to be ready...")
             import time
             time.sleep(3)
+            print(f"[DEBUG] Wait completed, starting connection...")
             
             # Start connection
+            print(f"[DEBUG] Starting SignalR connection...")
             self.connection.start()
+            print(f"[DEBUG] SignalR connection.start() called")
             
             # Wait for connection to stabilize
+            print(f"[DEBUG] Waiting 2 seconds for connection to stabilize...")
             time.sleep(2)
+            print(f"[DEBUG] Connection stabilization wait completed")
             
             # Check if connection is still active
+            print(f"[DEBUG] Checking connection status...")
             if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
+                print(f"[DEBUG] Transport and WebSocket objects found")
                 if self.connection.transport._ws and self.connection.transport._ws.sock:
+                    print(f"[DEBUG] WebSocket is active and connected")
                     pass  # Connection is active
                 else:
+                    print(f"[DEBUG] ERROR: WebSocket is not active or not connected")
                     raise ConnectionError("SignalR connection is not active")
+            else:
+                print(f"[DEBUG] ERROR: Transport or WebSocket objects not found")
+                raise ConnectionError("SignalR connection transport not available")
             
             # Join group
+            print(f"[DEBUG] Joining SignalR group: {self.config.group}")
             self.connection.send("JoinGroup", [self.config.group])
+            print(f"[DEBUG] JoinGroup command sent successfully")
             
             self.is_running = True
+            print(f"[DEBUG] SignalRInputHandler.start() completed successfully - is_running: {self.is_running}")
             
         except Exception as e:
             import traceback
@@ -94,24 +118,34 @@ class SignalRInputHandler:
     
     async def stop(self):
         """Stop SignalR connection"""
+        print(f"[DEBUG] SignalRInputHandler.stop() called - is_running: {self.is_running}")
         self.is_running = False
+        
         if self.connection:
+            print(f"[DEBUG] Stopping SignalR connection...")
             try:
                 # Leave group (ignore errors)
+                print(f"[DEBUG] Leaving SignalR group: {self.config.group}")
                 try:
                     self.connection.send("LeaveGroup", [self.config.group])
-                except:
-                    pass  # Ignore leave group errors
+                    print(f"[DEBUG] LeaveGroup command sent successfully")
+                except Exception as e:
+                    print(f"[DEBUG] LeaveGroup error (ignored): {e}")
                 
                 # Stop connection (ignore errors)
+                print(f"[DEBUG] Stopping SignalR connection...")
                 try:
                     self.connection.stop()
-                except:
-                    pass  # Ignore stop errors
+                    print(f"[DEBUG] SignalR connection.stop() completed")
+                except Exception as e:
+                    print(f"[DEBUG] Stop connection error (ignored): {e}")
                     
             except Exception as e:
-                # Silent error handling for shutdown
-                pass
+                print(f"[DEBUG] Stop connection general error (ignored): {e}")
+        else:
+            print(f"[DEBUG] No connection to stop")
+            
+        print(f"[DEBUG] SignalRInputHandler.stop() completed")
         self.logger.info("SignalR connection stopped")
     
     def _on_message(self, *args):

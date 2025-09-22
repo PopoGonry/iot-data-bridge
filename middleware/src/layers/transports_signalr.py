@@ -36,52 +36,73 @@ class SignalRTransport:
     async def send_to_device(self, device_target: DeviceTarget) -> bool:
         """Send data to device via SignalR"""
         print(f"[DEBUG] send_to_device START: {device_target.device_id}")
+        print(f"[DEBUG] Device target details: {device_target.device_id}/{device_target.group}")
+        print(f"[DEBUG] Message payload: {device_target.payload}")
         try:
             # Check if connection exists and is active
+            print(f"[DEBUG] Checking connection status...")
+            print(f"[DEBUG] Connection exists: {self.connection is not None}")
+            if self.connection:
+                print(f"[DEBUG] Connection active check: {self._is_connection_active()}")
+            
             if not self.connection or not self._is_connection_active():
                 print(f"[DEBUG] Creating new connection for {device_target.device_id}")
                 # Clean up old connection if exists
                 if self.connection:
+                    print(f"[DEBUG] Cleaning up old SignalR transport connection...")
                     self.logger.info("Cleaning up old SignalR transport connection...")
                     try:
                         self.connection.stop()
-                    except:
-                        pass
+                        print(f"[DEBUG] Old connection stopped successfully")
+                    except Exception as e:
+                        print(f"[DEBUG] Error stopping old connection (ignored): {e}")
                     self.connection = None
                 
+                print(f"[DEBUG] Building new SignalR transport connection to: {self.config.url}")
                 self.logger.info("Creating new SignalR transport connection...")
                 self.connection = HubConnectionBuilder() \
                     .with_url(self.config.url) \
                     .build()
+                print(f"[DEBUG] SignalR transport connection object created: {self.connection}")
                 
                 # Add event handlers to prevent undefined errors
-                self.connection.on_open(lambda: self.logger.debug("SignalR transport connection opened"))
-                self.connection.on_close(lambda: self.logger.debug("SignalR transport connection closed"))
-                self.connection.on_error(lambda data: self.logger.error("SignalR transport connection error", error=data))
+                print(f"[DEBUG] Registering transport connection event handlers")
+                self.connection.on_open(lambda: print("[DEBUG] SignalR transport connection opened"))
+                self.connection.on_close(lambda: print("[DEBUG] SignalR transport connection closed"))
+                self.connection.on_error(lambda data: print(f"[DEBUG] SignalR transport connection error: {data}"))
                 
-                print(f"[DEBUG] Starting SignalR connection...")
+                print(f"[DEBUG] Starting SignalR transport connection...")
                 self.connection.start()
+                print(f"[DEBUG] SignalR transport connection.start() called")
                 
                 # Wait for connection to stabilize
+                print(f"[DEBUG] Waiting 1 second for transport connection to stabilize...")
                 import time
                 time.sleep(1)
-                print(f"[DEBUG] SignalR connection started successfully")
+                print(f"[DEBUG] Transport connection stabilization wait completed")
+                print(f"[DEBUG] SignalR transport connection started successfully")
             
             # Get device-specific configuration
+            print(f"[DEBUG] Getting device-specific configuration for: {device_target.device_id}")
             device_config = device_target.transport_config.config
             group = device_config.get('group', device_target.device_id)
             target = device_config.get('target', 'ingress')
+            print(f"[DEBUG] Device config - group: {group}, target: {target}")
             
             # Prepare payload
+            print(f"[DEBUG] Preparing payload for device: {device_target.device_id}")
             payload = {
                 "object": device_target.object,
                 "value": device_target.value,
                 "timestamp": asyncio.get_event_loop().time()
             }
+            print(f"[DEBUG] Payload prepared: {payload}")
             
             print(f"[DEBUG] Sending message to {group}/{target}")
             # Send message to device group
-            self.connection.send("SendMessage", [group, target, json.dumps(payload)])
+            message = json.dumps(payload)
+            print(f"[DEBUG] Message content: {message}")
+            self.connection.send("SendMessage", [group, target, message])
             print(f"[DEBUG] Message sent successfully to {device_target.device_id}")
             
             return True

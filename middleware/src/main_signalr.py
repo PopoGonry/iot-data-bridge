@@ -257,35 +257,52 @@ class IoTDataBridge:
         except Exception as e:
             pass
     
-    async def _handle_ingress_event(self, event: IngressEvent):
-        """Handle ingress event from input layer"""
-        print(f"[DEBUG] _handle_ingress_event: {event.trace_id}")
-        try:
-            await self.mapping_layer.map_event(event)
-            print(f"[DEBUG] _handle_ingress_event completed: {event.trace_id}")
-        except Exception as e:
-            print(f"[DEBUG] ERROR in _handle_ingress_event: {e}")
-            raise
+        async def _handle_ingress_event(self, event: IngressEvent):
+            """Handle ingress event from input layer"""
+            print(f"[DEBUG] _handle_ingress_event START: {event.trace_id}")
+            print(f"[DEBUG] Ingress event raw data: {event.raw}")
+            print(f"[DEBUG] Ingress event meta: {event.meta}")
+            try:
+                print(f"[DEBUG] Calling mapping_layer.map_event for: {event.trace_id}")
+                await self.mapping_layer.map_event(event)
+                print(f"[DEBUG] _handle_ingress_event COMPLETED: {event.trace_id}")
+            except Exception as e:
+                print(f"[DEBUG] ERROR in _handle_ingress_event: {e}")
+                import traceback
+                print(f"[DEBUG] _handle_ingress_event traceback: {traceback.format_exc()}")
+                raise
     
-    async def _handle_mapped_event(self, event: MappedEvent):
-        """Handle mapped event from mapping layer"""
-        print(f"[DEBUG] _handle_mapped_event: {event.trace_id}")
-        try:
-            await self.resolver_layer.resolve_event(event)
-            print(f"[DEBUG] _handle_mapped_event completed: {event.trace_id}")
-        except Exception as e:
-            print(f"[DEBUG] ERROR in _handle_mapped_event: {e}")
-            raise
+        async def _handle_mapped_event(self, event: MappedEvent):
+            """Handle mapped event from mapping layer"""
+            print(f"[DEBUG] _handle_mapped_event START: {event.trace_id}")
+            print(f"[DEBUG] Mapped event object: {event.object}")
+            print(f"[DEBUG] Mapped event value: {event.value}")
+            print(f"[DEBUG] Mapped event device_id: {event.device_id}")
+            try:
+                print(f"[DEBUG] Calling resolver_layer.resolve_event for: {event.trace_id}")
+                await self.resolver_layer.resolve_event(event)
+                print(f"[DEBUG] _handle_mapped_event COMPLETED: {event.trace_id}")
+            except Exception as e:
+                print(f"[DEBUG] ERROR in _handle_mapped_event: {e}")
+                import traceback
+                print(f"[DEBUG] _handle_mapped_event traceback: {traceback.format_exc()}")
+                raise
     
-    async def _handle_resolved_event(self, event: ResolvedEvent):
-        """Handle resolved event from resolver layer"""
-        print(f"[DEBUG] _handle_resolved_event: {event.trace_id}")
-        try:
-            await self.transports_layer.send_to_devices(event)
-            print(f"[DEBUG] _handle_resolved_event completed: {event.trace_id}")
-        except Exception as e:
-            print(f"[DEBUG] ERROR in _handle_resolved_event: {e}")
-            raise
+        async def _handle_resolved_event(self, event: ResolvedEvent):
+            """Handle resolved event from resolver layer"""
+            print(f"[DEBUG] _handle_resolved_event START: {event.trace_id}")
+            print(f"[DEBUG] Resolved event target_devices: {event.target_devices}")
+            print(f"[DEBUG] Resolved event object: {event.object}")
+            print(f"[DEBUG] Resolved event value: {event.value}")
+            try:
+                print(f"[DEBUG] Calling transports_layer.send_to_devices for: {event.trace_id}")
+                await self.transports_layer.send_to_devices(event)
+                print(f"[DEBUG] _handle_resolved_event COMPLETED: {event.trace_id}")
+            except Exception as e:
+                print(f"[DEBUG] ERROR in _handle_resolved_event: {e}")
+                import traceback
+                print(f"[DEBUG] _handle_resolved_event traceback: {traceback.format_exc()}")
+                raise
     
     async def _handle_device_ingest(self, event: DeviceIngestLog):
         """Handle device ingest log"""
