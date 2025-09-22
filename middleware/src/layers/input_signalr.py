@@ -107,13 +107,16 @@ class SignalRInputHandler:
     
     def _on_message(self, *args):
         """Handle incoming SignalR message"""
+        print(f"[DEBUG] _on_message received: {len(args)} args")
         try:
             # SignalR messages come as a list of arguments
             if not args or len(args) < 1:
+                print("[DEBUG] No arguments in SignalR message")
                 return
             
             # First argument should be the message content
             message = args[0]
+            print(f"[DEBUG] Processing message: {type(message)}")
             
             # Parse message
             if isinstance(message, str):
@@ -129,6 +132,7 @@ class SignalRInputHandler:
             
             # Create ingress event
             trace_id = str(uuid.uuid4())
+            print(f"[DEBUG] Creating ingress event: {trace_id}")
             ingress_event = IngressEvent(
                 trace_id=trace_id,
                 raw=payload,
@@ -139,21 +143,25 @@ class SignalRInputHandler:
                 }
             )
             
+            print(f"[DEBUG] Scheduling callback for trace_id: {trace_id}")
             # Schedule the callback as a task
             import asyncio
             try:
                 # Try to get the current event loop
                 loop = asyncio.get_running_loop()
                 loop.create_task(self.callback(ingress_event))
+                print(f"[DEBUG] Callback scheduled successfully for trace_id: {trace_id}")
             except RuntimeError:
                 # If no event loop is running, create a new one
+                print(f"[DEBUG] No running loop, creating new one for trace_id: {trace_id}")
                 asyncio.run(self.callback(ingress_event))
             
         except json.JSONDecodeError as e:
+            print(f"[DEBUG] JSON decode error: {e}")
             self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
         except Exception as e:
             import traceback
-            print(f"Error processing SignalR message: {e}")
+            print(f"[DEBUG] ERROR processing SignalR message: {e}")
             print(f"Message: {message}")
             print(f"Traceback: {traceback.format_exc()}")
             self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())

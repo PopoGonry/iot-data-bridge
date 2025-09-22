@@ -35,9 +35,11 @@ class SignalRTransport:
     
     async def send_to_device(self, device_target: DeviceTarget) -> bool:
         """Send data to device via SignalR"""
+        print(f"[DEBUG] send_to_device START: {device_target.device_id}")
         try:
             # Check if connection exists and is active
             if not self.connection or not self._is_connection_active():
+                print(f"[DEBUG] Creating new connection for {device_target.device_id}")
                 # Clean up old connection if exists
                 if self.connection:
                     self.logger.info("Cleaning up old SignalR transport connection...")
@@ -57,11 +59,13 @@ class SignalRTransport:
                 self.connection.on_close(lambda: self.logger.debug("SignalR transport connection closed"))
                 self.connection.on_error(lambda data: self.logger.error("SignalR transport connection error", error=data))
                 
+                print(f"[DEBUG] Starting SignalR connection...")
                 self.connection.start()
                 
                 # Wait for connection to stabilize
                 import time
                 time.sleep(1)
+                print(f"[DEBUG] SignalR connection started successfully")
             
             # Get device-specific configuration
             device_config = device_target.transport_config.config
@@ -75,12 +79,17 @@ class SignalRTransport:
                 "timestamp": asyncio.get_event_loop().time()
             }
             
+            print(f"[DEBUG] Sending message to {group}/{target}")
             # Send message to device group
             self.connection.send("SendMessage", [group, target, json.dumps(payload)])
+            print(f"[DEBUG] Message sent successfully to {device_target.device_id}")
             
             return True
             
         except Exception as e:
+            print(f"[DEBUG] ERROR in send_to_device: {e}")
+            import traceback
+            print(f"[DEBUG] send_to_device traceback: {traceback.format_exc()}")
             self.logger.error("Error sending SignalR message",
                             device_id=device_target.device_id,
                             error=str(e))
@@ -146,6 +155,7 @@ class TransportsLayer(TransportsLayerInterface):
         await self.transport.close_connection()
     
     async def send_to_devices(self, event: ResolvedEvent) -> LayerResult:
+        print(f"[DEBUG] send_to_devices START: {event.trace_id}, devices: {event.target_devices}")
         self._increment_processed()
         device_targets = []
         for device_id in event.target_devices:
@@ -156,10 +166,13 @@ class TransportsLayer(TransportsLayerInterface):
             device_target = DeviceTarget(device_id=device_id, transport_config=transport_config, object=event.object, value=event.value)
             device_targets.append(device_target)
         
+        print(f"[DEBUG] Prepared {len(device_targets)} device targets")
         success_count = 0
-        for device_target in device_targets:
+        for i, device_target in enumerate(device_targets):
+            print(f"[DEBUG] Processing device {i+1}/{len(device_targets)}: {device_target.device_id}")
             try:
                 success = await self.transport.send_to_device(device_target)
+                print(f"[DEBUG] Device {device_target.device_id} send result: {success}")
                 if success:
                     success_count += 1
                     
@@ -172,14 +185,19 @@ class TransportsLayer(TransportsLayerInterface):
                     )
                     await self.device_ingest_callback(ingest_log)
                 else:
+                    print(f"[DEBUG] Failed to deliver to device: {device_target.device_id}")
                     self.logger.warning("TRANSPORTS LAYER: Failed to deliver to device", 
                                       trace_id=event.trace_id,
                                       device_id=device_target.device_id)
                     
             except Exception as e:
+                print(f"[DEBUG] ERROR delivering to device {device_target.device_id}: {e}")
+                import traceback
+                print(f"[DEBUG] send_to_devices error traceback: {traceback.format_exc()}")
                 self.logger.error("TRANSPORTS LAYER: Error delivering to device",
                                 trace_id=event.trace_id,
                                 device_id=device_target.device_id,
                                 error=str(e))
         
+        print(f"[DEBUG] send_to_devices COMPLETED: {success_count}/{len(device_targets)} successful")
         return LayerResult(success=success_count > 0, processed_count=len(device_targets), error_count=len(device_targets) - success_count, data=device_targets)

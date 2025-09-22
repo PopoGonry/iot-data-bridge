@@ -258,18 +258,33 @@ class IoTDataBridge:
     
     async def _handle_ingress_event(self, event: IngressEvent):
         """Handle ingress event from input layer"""
-        # No console log - only file log
-        await self.mapping_layer.map_event(event)
+        print(f"[DEBUG] _handle_ingress_event: {event.trace_id}")
+        try:
+            await self.mapping_layer.map_event(event)
+            print(f"[DEBUG] _handle_ingress_event completed: {event.trace_id}")
+        except Exception as e:
+            print(f"[DEBUG] ERROR in _handle_ingress_event: {e}")
+            raise
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
-        # No console log - only file log
-        await self.resolver_layer.resolve_event(event)
+        print(f"[DEBUG] _handle_mapped_event: {event.trace_id}")
+        try:
+            await self.resolver_layer.resolve_event(event)
+            print(f"[DEBUG] _handle_mapped_event completed: {event.trace_id}")
+        except Exception as e:
+            print(f"[DEBUG] ERROR in _handle_mapped_event: {e}")
+            raise
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
-        # No console log - only file log
-        await self.transports_layer.send_to_devices(event)
+        print(f"[DEBUG] _handle_resolved_event: {event.trace_id}")
+        try:
+            await self.transports_layer.send_to_devices(event)
+            print(f"[DEBUG] _handle_resolved_event completed: {event.trace_id}")
+        except Exception as e:
+            print(f"[DEBUG] ERROR in _handle_resolved_event: {e}")
+            raise
     
     async def _handle_device_ingest(self, event: DeviceIngestLog):
         """Handle device ingest log"""
@@ -291,13 +306,20 @@ class IoTDataBridge:
             print("Press Ctrl+C to stop")
             
             # Keep running with timeout
+            loop_count = 0
             while self.is_running:
+                loop_count += 1
+                if loop_count % 10 == 0:  # Every 10 seconds
+                    print(f"[DEBUG] Main loop running... count: {loop_count}")
+                
                 try:
                     await asyncio.wait_for(asyncio.sleep(1), timeout=1.0)
                 except asyncio.TimeoutError:
                     continue
                 except Exception as e:
-                    print(f"Error in main loop: {e}")
+                    print(f"[DEBUG] Error in main loop: {e}")
+                    import traceback
+                    print(f"[DEBUG] Main loop traceback: {traceback.format_exc()}")
                     break
                 
         except KeyboardInterrupt:
