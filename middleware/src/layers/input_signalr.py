@@ -32,12 +32,18 @@ class SignalRInputHandler:
         self.logger = structlog.get_logger("signalr_input")
         self.connection: Optional[BaseHubConnection] = None
         self.is_running = False
+        self.main_loop = None
     
     async def start(self):
         """Start SignalR connection"""
         if not SIGNALR_AVAILABLE:
             self.logger.error("SignalR is not available. Please install signalrcore library.")
             raise ImportError("SignalR library not available")
+        
+        # Store reference to main event loop
+        import asyncio
+        self.main_loop = asyncio.get_running_loop()
+        print(f"[DEBUG] Stored main loop reference: {self.main_loop}")
             
         try:
             # Build connection
@@ -144,17 +150,27 @@ class SignalRInputHandler:
             )
             
             print(f"[DEBUG] Scheduling callback for trace_id: {trace_id}")
-            # Schedule the callback as a task
-            import asyncio
+            # Use stored main loop reference to schedule callback
             try:
-                # Try to get the current event loop
-                loop = asyncio.get_running_loop()
-                loop.create_task(self.callback(ingress_event))
-                print(f"[DEBUG] Callback scheduled successfully for trace_id: {trace_id}")
-            except RuntimeError:
-                # If no event loop is running, create a new one
-                print(f"[DEBUG] No running loop, creating new one for trace_id: {trace_id}")
-                asyncio.run(self.callback(ingress_event))
+                if self.main_loop and self.main_loop.is_running():
+                    # Schedule the coroutine in the main loop using thread-safe method
+                    asyncio.run_coroutine_threadsafe(self.callback(ingress_event), self.main_loop)
+                    print(f"[DEBUG] Callback scheduled in main loop for trace_id: {trace_id}")
+                else:
+                    print(f"[DEBUG] Main loop not available, using fallback for trace_id: {trace_id}")
+                    # Fallback: try to get current loop
+                    try:
+                        loop = asyncio.get_running_loop()
+                        loop.create_task(self.callback(ingress_event))
+                        print(f"[DEBUG] Callback created as task for trace_id: {trace_id}")
+                    except RuntimeError:
+                        # Last resort: run synchronously
+                        asyncio.run(self.callback(ingress_event))
+                        print(f"[DEBUG] Callback executed synchronously for trace_id: {trace_id}")
+            except Exception as e:
+                print(f"[DEBUG] Error scheduling callback: {e}")
+                import traceback
+                print(f"[DEBUG] Callback scheduling traceback: {traceback.format_exc()}")
             
         except json.JSONDecodeError as e:
             print(f"[DEBUG] JSON decode error: {e}")
