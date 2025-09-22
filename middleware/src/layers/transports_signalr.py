@@ -267,6 +267,11 @@ class TransportsLayer(TransportsLayerInterface):
             
             return LayerResult(success=success_count > 0, processed_count=len(device_targets), error_count=len(device_targets) - success_count, data=device_targets)
         except Exception as e:
+            # 더 명확한 에러 로깅
+            error_msg = f"TRANSPORTS LAYER: Critical error in send_to_devices - {str(e)}"
+            print(f"ERROR: {error_msg}")
+            print(f"Traceback: {traceback.format_exc()}")
+            
             self.logger.error("TRANSPORTS LAYER: Critical error in send_to_devices", 
                             trace_id=event.trace_id,
                             error=str(e),
