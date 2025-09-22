@@ -35,35 +35,90 @@ class SignalRTransport:
         self.connection_retry_count = 0
         self.max_retries = 3
         self.retry_delay = 2
+        self.send_queue = asyncio.Queue(maxsize=500)  # 전송 큐
+        self.active_sends = set()  # 활성 전송 태스크 추적
     
     async def send_to_device(self, device_target: DeviceTarget) -> bool:
         """Send data to device via SignalR"""
         try:
-            if not self.connection or not self._is_connection_active():
-                await self._ensure_connection()
-            
-            # Get device-specific configuration
-            device_config = device_target.transport_config.config
-            group = device_config.get('group', device_target.device_id)
-            target = device_config.get('target', 'ingress')
-            
-            # Prepare payload
-            payload = {
-                "object": device_target.object,
-                "value": device_target.value,
-                "timestamp": asyncio.get_event_loop().time()
-            }
-            
-            # Send message to device group
-            self.connection.send("SendMessage", [group, target, json.dumps(payload)])
-            
+            # 큐에 전송 요청 추가
+            await self.send_queue.put(device_target)
             return True
             
         except Exception as e:
-            self.logger.error("Error sending SignalR message",
+            self.logger.error("Error queuing SignalR message",
                             device_id=device_target.device_id,
                             error=str(e))
             return False
+    
+    async def _process_send_queue(self):
+        """Process send queue with timeout and error handling"""
+        while True:
+            try:
+                # 큐에서 전송 요청 가져오기
+                device_target = await asyncio.wait_for(self.send_queue.get(), timeout=1.0)
+                await self._safe_send_message(device_target)
+            except asyncio.TimeoutError:
+                continue  # 타임아웃은 정상, 계속 대기
+            except Exception as e:
+                self.logger.error("Error in send queue processing", error=str(e))
+                await asyncio.sleep(0.1)
+    
+    async def _safe_send_message(self, device_target: DeviceTarget) -> bool:
+        """Safely send message with timeout and retry"""
+        for attempt in range(3):  # 3번 재시도
+            try:
+                if not self.connection or not self._is_connection_active():
+                    await self._ensure_connection()
+                
+                # Get device-specific configuration
+                device_config = device_target.transport_config.config
+                group = device_config.get('group', device_target.device_id)
+                target = device_config.get('target', 'ingress')
+                
+                # Prepare payload
+                payload = {
+                    "object": device_target.object,
+                    "value": device_target.value,
+                    "timestamp": asyncio.get_event_loop().time()
+                }
+                
+                # Send message with timeout
+                send_task = asyncio.create_task(self._send_message_with_timeout(group, target, payload))
+                self.active_sends.add(send_task)
+                
+                try:
+                    await asyncio.wait_for(send_task, timeout=3.0)
+                    self.active_sends.discard(send_task)
+                    return True
+                except asyncio.TimeoutError:
+                    self.logger.warning("Send message timeout", 
+                                      device_id=device_target.device_id, 
+                                      attempt=attempt + 1)
+                    send_task.cancel()
+                    self.active_sends.discard(send_task)
+                    if attempt < 2:
+                        await asyncio.sleep(0.5)
+                        continue
+                    return False
+                    
+            except Exception as e:
+                self.logger.error("Error sending SignalR message",
+                                device_id=device_target.device_id,
+                                attempt=attempt + 1,
+                                error=str(e))
+                if attempt < 2:
+                    await asyncio.sleep(0.5)
+                    continue
+                return False
+        
+        return False
+    
+    async def _send_message_with_timeout(self, group: str, target: str, payload: dict):
+        """Send message with timeout wrapper"""
+        # SignalR send는 동기 함수이므로 별도 스레드에서 실행
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.connection.send, "SendMessage", [group, target, json.dumps(payload)])
     
     def _is_connection_active(self) -> bool:
         """Check if SignalR connection is active"""
@@ -154,9 +209,16 @@ class TransportsLayer(TransportsLayerInterface):
     
     async def start(self) -> None:
         self.is_running = True
+        # Start send queue processing task
+        asyncio.create_task(self._process_send_queue())
     
     async def stop(self) -> None:
         self.is_running = False
+        # 모든 활성 전송 태스크 정리
+        for task in self.transport.active_sends:
+            task.cancel()
+        if self.transport.active_sends:
+            await asyncio.gather(*self.transport.active_sends, return_exceptions=True)
     
     async def send_to_devices(self, event: ResolvedEvent) -> LayerResult:
         self._increment_processed()
@@ -172,25 +234,26 @@ class TransportsLayer(TransportsLayerInterface):
         success_count = 0
         for device_target in device_targets:
             try:
+                # 큐에 추가하고 즉시 성공으로 처리 (비동기 처리)
                 success = await self.transport.send_to_device(device_target)
                 if success:
                     success_count += 1
                     
-                    # Log device ingest
+                    # Log device ingest (비동기)
                     ingest_log = DeviceIngestLog(
                         trace_id=event.trace_id,
                         device_id=device_target.device_id,
                         object=device_target.object,
                         value=device_target.value
                     )
-                    await self.device_ingest_callback(ingest_log)
+                    asyncio.create_task(self.device_ingest_callback(ingest_log))
                 else:
-                    self.logger.warning("TRANSPORTS LAYER: Failed to deliver to device", 
+                    self.logger.warning("TRANSPORTS LAYER: Failed to queue device delivery", 
                                       trace_id=event.trace_id,
                                       device_id=device_target.device_id)
                     
             except Exception as e:
-                self.logger.error("TRANSPORTS LAYER: Error delivering to device",
+                self.logger.error("TRANSPORTS LAYER: Error queuing device delivery",
                                 trace_id=event.trace_id,
                                 device_id=device_target.device_id,
                                 error=str(e))

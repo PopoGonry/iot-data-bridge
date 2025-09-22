@@ -33,8 +33,11 @@ class SignalRInputHandler:
         self.connection: Optional[BaseHubConnection] = None
         self.is_running = False
         self.connection_retry_count = 0
-        self.max_retries = 5
-        self.retry_delay = 5
+        self.max_retries = 10  # 더 많은 재시도
+        self.retry_delay = 3   # 더 빠른 재연결
+        self.last_heartbeat = None
+        self.active_tasks = set()  # 태스크 추적
+        self.message_queue = asyncio.Queue(maxsize=1000)  # 메시지 큐
     
     async def start(self):
         """Start SignalR connection"""
@@ -77,6 +80,12 @@ class SignalRInputHandler:
             
             self.is_running = True
             
+            # Start connection monitoring task
+            asyncio.create_task(self._monitor_connection())
+            
+            # Start message processing task
+            asyncio.create_task(self._process_message_queue())
+            
         except Exception as e:
             import traceback
             print(f"SignalR connection error: {e}")
@@ -97,6 +106,13 @@ class SignalRInputHandler:
     async def stop(self):
         """Stop SignalR connection"""
         self.is_running = False
+        
+        # 모든 활성 태스크 정리
+        for task in self.active_tasks:
+            task.cancel()
+        if self.active_tasks:
+            await asyncio.gather(*self.active_tasks, return_exceptions=True)
+        
         if self.connection:
             try:
                 # Leave group
@@ -134,10 +150,73 @@ class SignalRInputHandler:
         self.logger.info(f"Attempting to reconnect... (attempt {self.connection_retry_count}/{self.max_retries})")
         
         try:
+            # Clean up existing connection
+            if self.connection:
+                try:
+                    self.connection.stop()
+                except Exception:
+                    pass
+                self.connection = None
+            
             await asyncio.sleep(self.retry_delay)
-            await self.start()
+            
+            # Rebuild connection
+            self.connection = HubConnectionBuilder() \
+                .with_url(self.config.url) \
+                .build()
+            
+            # Register message handler
+            self.connection.on("ingress", self._on_message)
+            
+            # Register connection event handlers
+            self.connection.on_open(self._on_connection_open)
+            self.connection.on_close(self._on_connection_close)
+            self.connection.on_error(self._on_connection_error)
+            
+            # Start connection
+            self.connection.start()
+            
+            # Wait for connection to stabilize
+            await asyncio.sleep(2)
+            
+            # Join group
+            self.connection.send("JoinGroup", [self.config.group])
+            
+            self.logger.info("Reconnection successful")
+            
         except Exception as e:
             self.logger.error("Reconnection failed", error=str(e))
+            # Try again if we haven't exceeded max retries
+            if self.connection_retry_count < self.max_retries:
+                await asyncio.sleep(self.retry_delay * 2)  # Exponential backoff
+                await self._attempt_reconnect()
+    
+    async def _monitor_connection(self):
+        """Monitor connection health and reconnect if needed"""
+        while self.is_running:
+            try:
+                await asyncio.sleep(10)  # Check every 10 seconds
+                
+                if not self.connection or not self._is_connection_active():
+                    self.logger.warning("Connection lost detected, attempting to reconnect...")
+                    await self._attempt_reconnect()
+                    
+            except Exception as e:
+                self.logger.error("Error in connection monitoring", error=str(e))
+                await asyncio.sleep(5)
+    
+    def _is_connection_active(self) -> bool:
+        """Check if SignalR connection is active"""
+        if not self.connection:
+            return False
+        
+        try:
+            if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
+                return self.connection.transport._ws and self.connection.transport._ws.sock
+        except Exception:
+            pass
+        
+        return False
     
     def _on_callback_done(self, task):
         """Handle callback task completion"""
@@ -157,7 +236,35 @@ class SignalRInputHandler:
             # First argument should be the message content
             message = args[0]
             
+            # 큐에 메시지 추가 (논블로킹)
+            try:
+                self.message_queue.put_nowait(message)
+            except asyncio.QueueFull:
+                self.logger.warning("Message queue full, dropping message")
             
+        except Exception as e:
+            import traceback
+            print(f"Error queuing SignalR message: {e}")
+            print(f"Message: {message}")
+            print(f"Traceback: {traceback.format_exc()}")
+            self.logger.error("Error queuing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
+    
+    async def _process_message_queue(self):
+        """Process messages from queue with timeout and error handling"""
+        while self.is_running:
+            try:
+                # 큐에서 메시지 가져오기 (타임아웃 1초)
+                message = await asyncio.wait_for(self.message_queue.get(), timeout=1.0)
+                await self._safe_process_message(message)
+            except asyncio.TimeoutError:
+                continue  # 타임아웃은 정상, 계속 대기
+            except Exception as e:
+                self.logger.error("Error in message queue processing", error=str(e))
+                await asyncio.sleep(0.1)  # 에러 시 잠시 대기
+    
+    async def _safe_process_message(self, message):
+        """Safely process a single message with timeout"""
+        try:
             # Parse message (Reference 방식)
             if isinstance(message, str):
                 payload = json.loads(message)
@@ -182,14 +289,16 @@ class SignalRInputHandler:
                 }
             )
             
-            # Schedule the callback as a task
+            # 콜백 실행 (타임아웃 5초)
+            task = asyncio.create_task(self.callback(ingress_event))
+            self.active_tasks.add(task)
             try:
-                # Try to get the current event loop
-                loop = asyncio.get_running_loop()
-                loop.create_task(self.callback(ingress_event))
-            except RuntimeError:
-                # If no event loop is running, create a new one
-                asyncio.run(self.callback(ingress_event))
+                await asyncio.wait_for(task, timeout=5.0)
+            except asyncio.TimeoutError:
+                self.logger.error("Callback timeout for message", trace_id=trace_id)
+                task.cancel()
+            finally:
+                self.active_tasks.discard(task)
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)

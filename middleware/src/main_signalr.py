@@ -257,19 +257,31 @@ class IoTDataBridge:
             pass
     
     async def _handle_ingress_event(self, event: IngressEvent):
-        """Handle ingress event from input layer"""
-        # No console log - only file log
-        await self.mapping_layer.map_event(event)
+        """Handle ingress event from input layer with error recovery"""
+        try:
+            await asyncio.wait_for(self.mapping_layer.map_event(event), timeout=10.0)
+        except asyncio.TimeoutError:
+            self.logger.error("Mapping layer timeout", trace_id=event.trace_id)
+        except Exception as e:
+            self.logger.error("Error in mapping layer", trace_id=event.trace_id, error=str(e))
     
     async def _handle_mapped_event(self, event: MappedEvent):
-        """Handle mapped event from mapping layer"""
-        # No console log - only file log
-        await self.resolver_layer.resolve_event(event)
+        """Handle mapped event from mapping layer with error recovery"""
+        try:
+            await asyncio.wait_for(self.resolver_layer.resolve_event(event), timeout=10.0)
+        except asyncio.TimeoutError:
+            self.logger.error("Resolver layer timeout", trace_id=event.trace_id)
+        except Exception as e:
+            self.logger.error("Error in resolver layer", trace_id=event.trace_id, error=str(e))
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
-        """Handle resolved event from resolver layer"""
-        # No console log - only file log
-        await self.transports_layer.send_to_devices(event)
+        """Handle resolved event from resolver layer with error recovery"""
+        try:
+            await asyncio.wait_for(self.transports_layer.send_to_devices(event), timeout=15.0)
+        except asyncio.TimeoutError:
+            self.logger.error("Transports layer timeout", trace_id=event.trace_id)
+        except Exception as e:
+            self.logger.error("Error in transports layer", trace_id=event.trace_id, error=str(e))
     
     async def _handle_device_ingest(self, event: DeviceIngestLog):
         """Handle device ingest log"""
@@ -287,9 +299,15 @@ class IoTDataBridge:
             await self.transports_layer.start()
             await self.logging_layer.start()
             
-            # Keep running
+            # Keep running with periodic cleanup
+            cleanup_counter = 0
             while self.is_running:
                 await asyncio.sleep(1)
+                cleanup_counter += 1
+                
+                # 주기적으로 메모리 정리 (60초마다)
+                if cleanup_counter % 60 == 0:
+                    await self._periodic_cleanup()
                 
         except KeyboardInterrupt:
             pass
@@ -297,6 +315,15 @@ class IoTDataBridge:
             print(f"Error in main loop: {e}")
         finally:
             await self.stop()
+    
+    async def _periodic_cleanup(self):
+        """Periodic cleanup of resources"""
+        try:
+            import gc
+            gc.collect()  # 가비지 컬렉션 강제 실행
+            self.logger.debug("Periodic cleanup completed")
+        except Exception as e:
+            self.logger.error("Error during periodic cleanup", error=str(e))
     
     async def stop(self):
         """Stop the IoT Data Bridge"""
