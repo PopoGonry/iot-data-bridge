@@ -73,6 +73,10 @@ class ResolverLayer(ResolverLayerInterface):
     async def _log_middleware_event(self, event: MappedEvent, target_devices: list):
         """Log middleware event"""
         try:
+            # 로깅 콜백이 없으면 스킵
+            if not self.logging_callback:
+                return
+                
             # Create middleware event log
             middleware_log = MiddlewareEventLog(
                 trace_id=event.trace_id,

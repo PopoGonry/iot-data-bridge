@@ -177,10 +177,10 @@ class IoTDataBridge:
             self._handle_mapped_event
         )
         
-        # Initialize resolver layer
+        # Initialize resolver layer (로깅 비활성화)
         self.resolver_layer = ResolverLayer(
             self.device_catalog,
-            self._handle_resolved_event
+            None  # 로깅 콜백 비활성화
         )
         
         # Initialize transports layer
