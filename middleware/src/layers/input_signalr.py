@@ -157,38 +157,18 @@ class SignalRInputHandler:
             # First argument should be the message content
             message = args[0]
             
-            # Debug: Log the received message
-            self.logger.info("Received SignalR message", message_type=type(message).__name__, message=message)
             
-            # Handle batch messages (array of messages) or single message
-            if isinstance(message, list):
-                # Process each message in the batch
-                for item in message:
-                    if isinstance(item, str):
-                        payload = json.loads(item)
-                    else:
-                        payload = item
-                    self._process_single_message(payload)
-                return
-            elif isinstance(message, str):
+            # Parse message (Reference 방식)
+            if isinstance(message, str):
                 payload = json.loads(message)
+            elif isinstance(message, list) and len(message) > 0:
+                # If message is a list, take the first element (Reference 방식)
+                if isinstance(message[0], str):
+                    payload = json.loads(message[0])
+                else:
+                    payload = message[0]
             else:
                 payload = message
-            
-            self._process_single_message(payload)
-            
-        except json.JSONDecodeError as e:
-            self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
-        except Exception as e:
-            import traceback
-            print(f"Error processing SignalR message: {e}")
-            print(f"Message: {message}")
-            print(f"Traceback: {traceback.format_exc()}")
-            self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
-    
-    def _process_single_message(self, payload):
-        """Process a single message payload"""
-        try:
             
             # Create ingress event
             trace_id = str(uuid.uuid4())
@@ -206,18 +186,19 @@ class SignalRInputHandler:
             try:
                 # Try to get the current event loop
                 loop = asyncio.get_running_loop()
-                task = loop.create_task(self.callback(ingress_event))
-                # Add error handling for the task
-                task.add_done_callback(self._on_callback_done)
+                loop.create_task(self.callback(ingress_event))
             except RuntimeError:
                 # If no event loop is running, create a new one
                 asyncio.run(self.callback(ingress_event))
-                
+            
+        except json.JSONDecodeError as e:
+            self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
         except Exception as e:
             import traceback
-            print(f"Error processing single message: {e}")
+            print(f"Error processing SignalR message: {e}")
+            print(f"Message: {message}")
             print(f"Traceback: {traceback.format_exc()}")
-            self.logger.error("Error processing single message", error=str(e), traceback=traceback.format_exc())
+            self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
 
 
 class InputLayer(InputLayerInterface):
