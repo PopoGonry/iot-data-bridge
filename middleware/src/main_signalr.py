@@ -7,6 +7,7 @@ import asyncio
 import logging
 import signal
 import sys
+import time
 from pathlib import Path
 
 import structlog
@@ -305,22 +306,52 @@ class IoTDataBridge:
             print("IoT Data Bridge started successfully!")
             print("Press Ctrl+C to stop")
             
-            # Keep running with timeout
-            loop_count = 0
-            while self.is_running:
-                loop_count += 1
-                if loop_count % 10 == 0:  # Every 10 seconds
-                    print(f"[DEBUG] Main loop running... count: {loop_count}")
-                
-                try:
-                    await asyncio.wait_for(asyncio.sleep(1), timeout=1.0)
-                except asyncio.TimeoutError:
-                    continue
-                except Exception as e:
-                    print(f"[DEBUG] Error in main loop: {e}")
-                    import traceback
-                    print(f"[DEBUG] Main loop traceback: {traceback.format_exc()}")
-                    break
+                # Keep running with timeout
+                loop_count = 0
+                while self.is_running:
+                    loop_count += 1
+                    if loop_count % 10 == 0:  # Every 10 seconds
+                        print(f"[DEBUG] Main loop running... count: {loop_count}")
+                        # Check layer states
+                        print(f"[DEBUG] Layer states - Input: {getattr(self.input_layer, 'is_running', 'N/A')}, "
+                              f"Mapping: {getattr(self.mapping_layer, 'is_running', 'N/A')}, "
+                              f"Resolver: {getattr(self.resolver_layer, 'is_running', 'N/A')}, "
+                              f"Transports: {getattr(self.transports_layer, 'is_running', 'N/A')}")
+                        
+                        # Check SignalR connection status
+                        if hasattr(self.input_layer, 'handler') and self.input_layer.handler:
+                            handler = self.input_layer.handler
+                            last_msg_time = getattr(handler, 'last_message_time', 0)
+                            current_time = time.time()
+                            time_since_last_msg = current_time - last_msg_time if last_msg_time > 0 else 0
+                            print(f"[DEBUG] SignalR last message: {time_since_last_msg:.1f}s ago")
+                            
+                            # Check if SignalR connection is still active
+                            if hasattr(handler, 'connection') and handler.connection:
+                                try:
+                                    # Try to check connection status
+                                    if hasattr(handler.connection, 'transport') and hasattr(handler.connection.transport, '_ws'):
+                                        if handler.connection.transport._ws and handler.connection.transport._ws.sock:
+                                            print(f"[DEBUG] SignalR connection: ACTIVE")
+                                        else:
+                                            print(f"[DEBUG] SignalR connection: INACTIVE - WebSocket closed")
+                                    else:
+                                        print(f"[DEBUG] SignalR connection: UNKNOWN state")
+                                except Exception as e:
+                                    print(f"[DEBUG] SignalR connection check error: {e}")
+                            else:
+                                print(f"[DEBUG] SignalR connection: NOT INITIALIZED")
+                    
+                    try:
+                        await asyncio.wait_for(asyncio.sleep(1), timeout=1.0)
+                    except asyncio.TimeoutError:
+                        print(f"[DEBUG] Main loop timeout at count {loop_count}")
+                        continue
+                    except Exception as e:
+                        print(f"[DEBUG] Error in main loop at count {loop_count}: {e}")
+                        import traceback
+                        print(f"[DEBUG] Main loop traceback: {traceback.format_exc()}")
+                        break
                 
         except KeyboardInterrupt:
             print("\nKeyboard interrupt received")

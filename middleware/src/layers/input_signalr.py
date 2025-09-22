@@ -33,6 +33,7 @@ class SignalRInputHandler:
         self.connection: Optional[BaseHubConnection] = None
         self.is_running = False
         self.main_loop = None
+        self.last_message_time = 0
     
     async def start(self):
         """Start SignalR connection"""
@@ -113,7 +114,9 @@ class SignalRInputHandler:
     
     def _on_message(self, *args):
         """Handle incoming SignalR message"""
-        print(f"[DEBUG] _on_message received: {len(args)} args")
+        import time
+        self.last_message_time = time.time()
+        print(f"[DEBUG] _on_message received: {len(args)} args, time: {self.last_message_time}")
         try:
             # SignalR messages come as a list of arguments
             if not args or len(args) < 1:
@@ -154,8 +157,20 @@ class SignalRInputHandler:
             try:
                 if self.main_loop and self.main_loop.is_running():
                     # Schedule the coroutine in the main loop using thread-safe method
-                    asyncio.run_coroutine_threadsafe(self.callback(ingress_event), self.main_loop)
+                    future = asyncio.run_coroutine_threadsafe(self.callback(ingress_event), self.main_loop)
                     print(f"[DEBUG] Callback scheduled in main loop for trace_id: {trace_id}")
+                    
+                    # Add a callback to check for exceptions
+                    def callback_done(future):
+                        try:
+                            result = future.result()
+                            print(f"[DEBUG] Callback completed successfully for trace_id: {trace_id}")
+                        except Exception as e:
+                            print(f"[DEBUG] Callback failed for trace_id: {trace_id}, error: {e}")
+                            import traceback
+                            print(f"[DEBUG] Callback error traceback: {traceback.format_exc()}")
+                    
+                    future.add_done_callback(callback_done)
                 else:
                     print(f"[DEBUG] Main loop not available, using fallback for trace_id: {trace_id}")
                     # Fallback: try to get current loop
