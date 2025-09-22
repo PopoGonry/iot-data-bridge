@@ -43,17 +43,8 @@ public class IoTHub : Hub
 
     public async Task SendMessage(string groupName, string target, string message)
     {
-        // Route messages from data_sources to iot_clients (middleware)
-        if (groupName == "data_sources" && target == "ingress")
-        {
-            await Clients.Group("iot_clients").SendAsync("ingress", message);
-            Console.WriteLine($"Routed from data_sources to iot_clients: {message}");
-        }
-        else
-        {
-            await Clients.Group(groupName).SendAsync(target, message);
-            Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
-        }
+        await Clients.Group(groupName).SendAsync(target, message);
+        Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
     }
 
     public async Task SendToGroup(string groupName, string target, object data)
@@ -69,25 +60,12 @@ public class IoTHub : Hub
             // 배치 메시지를 파싱하여 각각 전송
             var batchMessages = System.Text.Json.JsonSerializer.Deserialize<object[]>(batchMessagesJson);
             
-            if (batchMessages == null || batchMessages.Length == 0)
+            foreach (var message in batchMessages)
             {
-                Console.WriteLine("No messages in batch");
-                return;
+                await Clients.Group(groupName).SendAsync(target, message);
             }
             
-            // Route batch messages from data_sources to iot_clients (middleware)
-            if (groupName == "data_sources" && target == "ingress")
-            {
-                // Send all messages as a single batch to iot_clients group
-                await Clients.Group("iot_clients").SendAsync("ingress", batchMessages);
-                Console.WriteLine($"Routed {batchMessages.Length} batch messages from data_sources to iot_clients");
-            }
-            else
-            {
-                // Send all messages as a single batch to target group
-                await Clients.Group(groupName).SendAsync(target, batchMessages);
-                Console.WriteLine($"Sent {batchMessages.Length} batch messages to group {groupName}, target {target}");
-            }
+            Console.WriteLine($"Sent {batchMessages.Length} batch messages to group {groupName}, target {target}");
         }
         catch (Exception ex)
         {
