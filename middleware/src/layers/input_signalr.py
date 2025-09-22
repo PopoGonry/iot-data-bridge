@@ -49,9 +49,9 @@ class SignalRInputHandler:
             self.connection.on("ingress", self._on_message)
             
             # Register connection event handlers
-            self.connection.on_open(lambda: None)
-            self.connection.on_close(lambda: None)
-            self.connection.on_error(lambda data: None)
+            self.connection.on_open(lambda: self.logger.debug("SignalR input connection opened"))
+            self.connection.on_close(lambda: self._on_connection_close())
+            self.connection.on_error(lambda data: self.logger.error("SignalR input connection error", error=data))
             
             # Wait a moment for SignalR hub to be fully ready
             import time
@@ -157,6 +157,31 @@ class SignalRInputHandler:
             print(f"Message: {message}")
             print(f"Traceback: {traceback.format_exc()}")
             self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
+    
+    def _on_connection_close(self):
+        """Handle connection close - attempt reconnection"""
+        self.logger.warning("SignalR input connection closed, attempting reconnection...")
+        # Schedule reconnection attempt
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._attempt_reconnection())
+        except RuntimeError:
+            pass
+    
+    async def _attempt_reconnection(self):
+        """Attempt to reconnect SignalR connection"""
+        try:
+            self.logger.info("Attempting to reconnect SignalR input connection...")
+            await self.start()
+            self.logger.info("SignalR input connection reconnected successfully")
+        except Exception as e:
+            self.logger.error("Failed to reconnect SignalR input connection", error=str(e))
+            # Schedule another attempt after delay
+            import asyncio
+            await asyncio.sleep(5)  # Wait 5 seconds before next attempt
+            if self.is_running:
+                await self._attempt_reconnection()
 
 
 class InputLayer(InputLayerInterface):
