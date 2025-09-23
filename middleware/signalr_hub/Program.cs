@@ -24,14 +24,6 @@ app.MapHub<IoTHub>("/hub");
 
 app.MapGet("/", () => "IoT Data Bridge SignalR Hub is running!");
 
-// Add health check endpoint
-app.MapGet("/health", () => "OK");
-
-Console.WriteLine("🚀 Starting IoT Data Bridge SignalR Hub...");
-Console.WriteLine("📍 Listening on: http://0.0.0.0:5000");
-Console.WriteLine("🔗 Hub endpoint: http://0.0.0.0:5000/hub");
-Console.WriteLine("❤️  Health check: http://0.0.0.0:5000/health");
-
 // Configure to listen on all interfaces (0.0.0.0) instead of just localhost
 app.Run("http://0.0.0.0:5000");
 
@@ -65,10 +57,10 @@ public class IoTHub : Hub
     {
         try
         {
-            // 배치 메시지를 파싱하여 각각 전송
+            // Parse batch messages and send them in parallel
             var batchMessages = System.Text.Json.JsonSerializer.Deserialize<object[]>(batchMessagesJson);
             
-            // 병렬로 모든 메시지를 전송
+            // Send all messages in parallel using Task.WhenAll for better performance
             var tasks = batchMessages.Select(message => 
                 Clients.Group(groupName).SendAsync(target, message)
             );
@@ -96,4 +88,3 @@ public class IoTHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 }
-

@@ -5,6 +5,7 @@ Input Layer - SignalR External data reception
 import asyncio
 import json
 import uuid
+import datetime
 from typing import Optional, Callable, Any
 import structlog
 
@@ -24,7 +25,7 @@ from models.config import InputConfig
 
 
 class SignalRInputHandler:
-    """SignalR input handler"""
+    """SignalR input handler with optimized batch processing"""
     
     def __init__(self, config, callback: Callable[[IngressEvent], None]):
         self.config = config
@@ -32,31 +33,36 @@ class SignalRInputHandler:
         self.logger = structlog.get_logger("signalr_input")
         self.connection: Optional[BaseHubConnection] = None
         self.is_running = False
+        self.message_buffer = []
+        self.buffer_size = 10  # Process messages in batches
+        self.buffer_timeout = 1.0  # Flush buffer after 1 second
+        self._buffer_task = None
     
     async def start(self):
-        """Start SignalR connection"""
+        """Start SignalR connection with optimized settings"""
         if not SIGNALR_AVAILABLE:
             self.logger.error("SignalR is not available. Please install signalrcore library.")
             raise ImportError("SignalR library not available")
             
         try:
-            # Build connection
+            # Build connection with optimized settings
             self.connection = HubConnectionBuilder() \
                 .with_url(self.config.url) \
+                .with_automatic_reconnect([0, 2000, 10000, 30000]) \
                 .build()
             
             # Register message handler for ingress messages
             self.connection.on("ingress", self._on_message)
             
             # Register connection event handlers
-            self.connection.on_open(lambda: None)
-            self.connection.on_close(lambda: None)
-            self.connection.on_error(lambda data: None)
+            self.connection.on_open(lambda: self.logger.info("SignalR connection opened"))
+            self.connection.on_close(lambda: self.logger.info("SignalR connection closed"))
+            self.connection.on_error(lambda data: self.logger.error("SignalR connection error", error=data))
             
             # Start connection
             self.connection.start()
             
-            # Wait for connection to stabilize asynchronously
+            # Wait for connection to stabilize
             await asyncio.sleep(2)
             
             # Check if connection is still active
@@ -69,7 +75,11 @@ class SignalRInputHandler:
             # Join group
             self.connection.send("JoinGroup", [self.config.group])
             
+            # Start buffer processing task
+            self._buffer_task = asyncio.create_task(self._process_buffer())
+            
             self.is_running = True
+            self.logger.info("SignalR input handler started", group=self.config.group)
             
         except Exception as e:
             import traceback
@@ -82,6 +92,19 @@ class SignalRInputHandler:
     async def stop(self):
         """Stop SignalR connection"""
         self.is_running = False
+        
+        # Cancel buffer task
+        if self._buffer_task:
+            self._buffer_task.cancel()
+            try:
+                await self._buffer_task
+            except asyncio.CancelledError:
+                pass
+        
+        # Process remaining messages in buffer
+        if self.message_buffer:
+            await self._flush_buffer()
+        
         if self.connection:
             try:
                 # Leave group
@@ -91,18 +114,64 @@ class SignalRInputHandler:
                 self.logger.error("Error stopping SignalR connection", error=str(e))
         self.logger.info("SignalR connection stopped")
     
-    async def _timeout_callback(self, task, timeout):
-        """Monitor callback task with timeout"""
+    async def _process_buffer(self):
+        """Process message buffer periodically"""
+        while self.is_running:
+            try:
+                await asyncio.sleep(self.buffer_timeout)
+                if self.message_buffer:
+                    await self._flush_buffer()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self.logger.error("Error in buffer processing", error=str(e))
+    
+    async def _flush_buffer(self):
+        """Flush message buffer and process all messages"""
+        if not self.message_buffer:
+            return
+        
+        messages = self.message_buffer.copy()
+        self.message_buffer.clear()
+        
+        # Process messages in parallel
+        tasks = []
+        for message in messages:
+            task = asyncio.create_task(self._process_single_message(message))
+            tasks.append(task)
+        
+        # Wait for all tasks to complete
         try:
-            await asyncio.wait_for(task, timeout=timeout)
-        except asyncio.TimeoutError:
-            self.logger.warning("Callback task timed out", timeout=timeout)
-            task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
         except Exception as e:
-            self.logger.error("Callback task error", error=str(e))
+            self.logger.error("Error processing message batch", error=str(e))
+    
+    async def _process_single_message(self, message):
+        """Process a single message with timeout protection"""
+        try:
+            # Create ingress event
+            trace_id = str(uuid.uuid4())
+            ingress_event = IngressEvent(
+                trace_id=trace_id,
+                raw=message,
+                meta={
+                    "source": "signalr",
+                    "group": self.config.group,
+                    "target": "ingress",
+                    "timestamp": datetime.datetime.utcnow().isoformat()
+                }
+            )
+            
+            # Process with timeout
+            await asyncio.wait_for(self.callback(ingress_event), timeout=5.0)
+            
+        except asyncio.TimeoutError:
+            self.logger.warning("Message processing timed out", message=message)
+        except Exception as e:
+            self.logger.error("Error processing message", error=str(e), message=message)
     
     def _on_message(self, *args):
-        """Handle incoming SignalR message"""
+        """Handle incoming SignalR message with batch processing"""
         try:
             # SignalR messages come as a list of arguments
             if not args or len(args) < 1:
@@ -125,30 +194,12 @@ class SignalRInputHandler:
             else:
                 payload = message
             
-            # Create ingress event
-            trace_id = str(uuid.uuid4())
-            ingress_event = IngressEvent(
-                trace_id=trace_id,
-                raw=payload,
-                meta={
-                    "source": "signalr",
-                    "group": self.config.group,
-                    "target": "ingress"
-                }
-            )
+            # Add to buffer
+            self.message_buffer.append(payload)
             
-            # Schedule the callback as a task with timeout
-            import asyncio
-            try:
-                # Try to get the current event loop
-                loop = asyncio.get_running_loop()
-                # Use create_task for better performance with timeout
-                task = asyncio.create_task(self.callback(ingress_event))
-                # Add timeout to prevent hanging
-                asyncio.create_task(self._timeout_callback(task, 10.0))
-            except RuntimeError:
-                # If no event loop is running, create a new one
-                asyncio.run(self.callback(ingress_event))
+            # If buffer is full, process immediately
+            if len(self.message_buffer) >= self.buffer_size:
+                asyncio.create_task(self._flush_buffer())
             
         except json.JSONDecodeError as e:
             self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
