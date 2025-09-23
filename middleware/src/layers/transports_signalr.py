@@ -19,7 +19,7 @@ except ImportError as e:
     HubConnectionBuilder = None
     BaseHubConnection = None
 
-from layers.base import TransportLayerInterface
+from layers.base import TransportsLayerInterface
 from models.events import ResolvedEvent
 from models.config import TransportConfig
 
@@ -239,7 +239,7 @@ class SignalRTransportHandler:
         return results
 
 
-class TransportLayer(TransportLayerInterface):
+class TransportLayer(TransportsLayerInterface):
     """Transport Layer - SignalR only"""
     
     def __init__(self, config: TransportConfig, device_catalog):
