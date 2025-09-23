@@ -302,6 +302,39 @@ class IoTDataBridge:
                                         time.sleep(1)
                         except:
                             pass
+                        
+                        # Try sudo methods for system processes
+                        try:
+                            print("   🔧 Trying sudo methods for system processes...")
+                            
+                            # Try stopping systemd service first
+                            subprocess.run(["sudo", "systemctl", "stop", "mosquitto"], check=False, capture_output=True)
+                            time.sleep(1)
+                            
+                            # Try sudo pkill
+                            subprocess.run(["sudo", "pkill", "-f", "mosquitto"], check=False, capture_output=True)
+                            time.sleep(1)
+                            
+                            # Try sudo fuser
+                            subprocess.run(["sudo", "fuser", "-k", "1883/tcp"], check=False, capture_output=True)
+                            time.sleep(1)
+                            
+                            # Try sudo lsof and kill
+                            result = subprocess.run(["sudo", "lsof", "-ti:1883"], capture_output=True, text=True)
+                            if result.stdout.strip():
+                                pids = result.stdout.strip().split('\n')
+                                for pid in pids:
+                                    if pid.strip():
+                                        print(f"   🔧 Killing system process {pid} using port 1883 (sudo lsof)")
+                                        subprocess.run(["sudo", "kill", "-9", pid.strip()], check=False, capture_output=True)
+                                        time.sleep(1)
+                                        
+                            # Try disabling the service to prevent restart
+                            subprocess.run(["sudo", "systemctl", "disable", "mosquitto"], check=False, capture_output=True)
+                            
+                        except Exception as e:
+                            print(f"   ⚠️  Sudo methods failed: {e}")
+                            pass
                             
                     except:
                         pass
@@ -398,9 +431,20 @@ class IoTDataBridge:
                     pass
                 
                 print("\n💡 Manual cleanup commands:")
+                print("   # Stop systemd service:")
+                print("   sudo systemctl stop mosquitto")
+                print("   sudo systemctl disable mosquitto")
+                print("   ")
+                print("   # Kill processes:")
                 print("   sudo pkill -f mosquitto")
                 print("   sudo fuser -k 1883/tcp")
+                print("   ")
+                print("   # Check what's using the port:")
                 print("   sudo netstat -tlnp | grep 1883")
+                print("   sudo lsof -i:1883")
+                print("   ")
+                print("   # If still in use, find and kill manually:")
+                print("   sudo lsof -ti:1883 | xargs sudo kill -9")
                 return False
             
             print(f"Starting mosquitto with command: {' '.join(cmd)}")
