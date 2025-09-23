@@ -234,12 +234,12 @@ class IoTDataBridge:
         # Set up optimized layer callbacks
         self.resolver_layer.set_transports_callback(self._handle_resolved_event)
         
-            # Pre-warm connections for better performance
-            try:
-                await self._pre_warm_connections()
-            except Exception as e:
-                # Silent pre-warm failure
-                pass
+        # Pre-warm connections for better performance
+        try:
+            await self._pre_warm_connections()
+        except Exception as e:
+            # Silent pre-warm failure
+            pass
     
     async def _pre_warm_connections(self):
         """Pre-warm connections for better performance"""
