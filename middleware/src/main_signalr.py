@@ -59,7 +59,9 @@ class IoTDataBridge:
             await self._initialize_layers()
             
             # Start SignalR hub
-            self._start_signalr_hub()
+            hub_started = await self._start_signalr_hub()
+            if not hub_started:
+                print("Warning: SignalR hub failed to start. Continuing without hub...")
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -198,15 +200,17 @@ class IoTDataBridge:
         # Set up layer callbacks
         self.resolver_layer.set_transports_callback(self._handle_resolved_event)
     
-    def _start_signalr_hub(self):
-        """Start SignalR hub"""
+    async def _start_signalr_hub(self):
+        """Start SignalR hub asynchronously"""
         import subprocess
         import os
+        import asyncio
         
         try:
             # Stop any existing dotnet processes (silently ignore errors)
             try:
                 subprocess.run(["pkill", "dotnet"], check=False, capture_output=True)
+                await asyncio.sleep(1)  # Wait for processes to stop
             except:
                 pass
             
@@ -225,28 +229,63 @@ class IoTDataBridge:
             
             if not signalr_hub_dir:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
-                return
+                return False
+            
+            print(f"Starting SignalR hub from: {signalr_hub_dir}")
             
             # Start SignalR hub in background
             result = subprocess.Popen([
                 "dotnet", "run"
             ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
-            # Give it a moment to start
-            import time
-            time.sleep(2)
+            # Wait for hub to start asynchronously
+            await asyncio.sleep(3)
             
             # Check if process is still running
             if result.poll() is None:
-                pass  # SignalR hub started successfully
+                # Verify hub is actually listening on port 5000
+                if await self._verify_hub_connection():
+                    print("SignalR hub started successfully and is listening on port 5000")
+                    return True
+                else:
+                    print("SignalR hub process started but not responding on port 5000")
+                    return False
             else:
                 stdout, stderr = result.communicate()
-                print(f"Failed to start SignalR hub: {stderr.decode()}")
+                print(f"Failed to start SignalR hub:")
+                print(f"STDOUT: {stdout.decode()}")
+                print(f"STDERR: {stderr.decode()}")
+                return False
                 
         except FileNotFoundError:
             print("Warning: dotnet not found. Please install .NET SDK or start SignalR hub manually.")
+            return False
         except Exception as e:
             print(f"Error starting SignalR hub: {e}")
+            return False
+    
+    async def _verify_hub_connection(self):
+        """Verify that SignalR hub is actually listening on port 5000"""
+        import socket
+        import asyncio
+        
+        try:
+            # Try to connect to port 5000
+            def check_port():
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2)
+                result = sock.connect_ex(('localhost', 5000))
+                sock.close()
+                return result == 0
+            
+            # Run the check in a thread to avoid blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, check_port)
+            return result
+            
+        except Exception as e:
+            print(f"Hub connection verification failed: {e}")
+            return False
     
     def _stop_signalr_hub(self):
         """Stop SignalR hub"""
