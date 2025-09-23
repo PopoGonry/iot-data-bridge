@@ -55,6 +55,7 @@ public class IoTHub : Hub
 
 <<<<<<< HEAD:reference/middleware/signalr_hub/Program.cs
 <<<<<<< HEAD:reference/middleware/signalr_hub/Program.cs
+<<<<<<< HEAD:reference/middleware/signalr_hub/Program.cs
     public async Task SendBatchMessages(string groupName, string target, string batchMessagesJson)
     {
         try
@@ -77,11 +78,16 @@ public class IoTHub : Hub
 =======
 =======
 >>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식):reference/middleware-server/signalr_hub/Program.cs
+=======
+>>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식):reference/middleware-server/signalr_hub/Program.cs
     public async Task SendMessage(string message)
     {
         await Clients.All.SendAsync("ReceiveMessage", message);
         Console.WriteLine($"Broadcast message: {message}");
 <<<<<<< HEAD:reference/middleware/signalr_hub/Program.cs
+<<<<<<< HEAD:reference/middleware/signalr_hub/Program.cs
+>>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식):reference/middleware-server/signalr_hub/Program.cs
+=======
 >>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식):reference/middleware-server/signalr_hub/Program.cs
 =======
 >>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식):reference/middleware-server/signalr_hub/Program.cs

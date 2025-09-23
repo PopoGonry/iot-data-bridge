@@ -100,6 +100,7 @@ async def publish_test_data(hub_url, group_name):
                 except Exception as e:
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                     print(f"Error sending batch messages, trying individual messages: {e}")
                     # 배치 전송 실패 시 개별 메시지로 전송
                     for i, message_data in enumerate(batch_messages, 1):
@@ -110,6 +111,10 @@ async def publish_test_data(hub_url, group_name):
                         except Exception as e2:
                             print(f"Error sending individual message {i}: {e2}")
                             break
+=======
+                    print(f"Error sending message {i}: {e}")
+                    break
+>>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식)
 =======
                     print(f"Error sending message {i}: {e}")
                     break
