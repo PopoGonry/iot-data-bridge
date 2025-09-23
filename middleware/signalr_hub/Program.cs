@@ -18,6 +18,9 @@ builder.Services.AddSignalR(options =>
 // Add memory cache for connection management
 builder.Services.AddMemoryCache();
 
+// Add response compression services
+builder.Services.AddResponseCompression();
+
 // Optimized CORS policy
 builder.Services.AddCors(options =>
 {
