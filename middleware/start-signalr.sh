@@ -140,7 +140,8 @@ cd ..
 # Wait for server to start
 echo "Waiting for SignalR server to start..."
 for i in {1..10}; do
-    if curl -s http://localhost:5000/ > /dev/null 2>&1; then
+    # Check if port 5000 is listening
+    if netstat -tlnp 2>/dev/null | grep -q ":5000 "; then
         echo "SignalR server started successfully!"
         break
     fi
@@ -149,7 +150,7 @@ for i in {1..10}; do
 done
 
 # Check if server started successfully
-if ! curl -s http://localhost:5000/ > /dev/null 2>&1; then
+if ! netstat -tlnp 2>/dev/null | grep -q ":5000 "; then
     echo "Error: Failed to start SignalR server"
     echo "Check signalr_server.log for details"
     exit 1
