@@ -207,11 +207,34 @@ class IoTDataBridge:
         import asyncio
         
         try:
-            # Stop any existing dotnet processes (silently ignore errors)
+            # Stop any existing dotnet processes more aggressively
             try:
+                print("Stopping any existing SignalR hubs...")
+                # Try multiple methods to stop dotnet processes
+                subprocess.run(["pkill", "-f", "dotnet"], check=False, capture_output=True)
                 subprocess.run(["pkill", "dotnet"], check=False, capture_output=True)
-                await asyncio.sleep(1)  # Wait for processes to stop
-            except:
+                subprocess.run(["killall", "dotnet"], check=False, capture_output=True)
+                
+                # Wait for processes to stop
+                await asyncio.sleep(2)
+                
+                # Check if port 5000 is still in use
+                import socket
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                result = sock.connect_ex(('localhost', 5000))
+                sock.close()
+                
+                if result == 0:
+                    print("Port 5000 is still in use, trying to force kill...")
+                    # Force kill any process using port 5000
+                    try:
+                        subprocess.run(["fuser", "-k", "5000/tcp"], check=False, capture_output=True)
+                        await asyncio.sleep(1)
+                    except:
+                        pass
+                        
+            except Exception as e:
+                print(f"Warning: Error stopping existing SignalR hubs: {e}")
                 pass
             
             # Get the directory where signalr_hub is located
@@ -229,6 +252,16 @@ class IoTDataBridge:
             
             if not signalr_hub_dir:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
+                return False
+            
+            # Final check if port 5000 is available
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(('localhost', 5000))
+            sock.close()
+            
+            if result == 0:
+                print("Error: Port 5000 is still in use after cleanup attempts")
+                print("Please manually stop any SignalR hubs and try again")
                 return False
             
             print(f"Starting SignalR hub from: {signalr_hub_dir}")

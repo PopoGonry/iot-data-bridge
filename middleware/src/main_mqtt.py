@@ -249,11 +249,33 @@ class IoTDataBridge:
         try:
             print("Starting MQTT broker...")
             
-            # Stop any existing mosquitto processes
+            # Stop any existing mosquitto processes more aggressively
             try:
+                print("Stopping any existing MQTT brokers...")
+                # Try multiple methods to stop mosquitto
                 subprocess.run(["pkill", "-f", "mosquitto"], check=False, capture_output=True)
-                time.sleep(1)  # Wait for processes to stop
-            except:
+                subprocess.run(["pkill", "mosquitto"], check=False, capture_output=True)
+                subprocess.run(["killall", "mosquitto"], check=False, capture_output=True)
+                
+                # Wait for processes to stop
+                time.sleep(2)
+                
+                # Check if port 1883 is still in use
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                result = sock.connect_ex(('localhost', 1883))
+                sock.close()
+                
+                if result == 0:
+                    print("Port 1883 is still in use, trying to force kill...")
+                    # Force kill any process using port 1883
+                    try:
+                        subprocess.run(["fuser", "-k", "1883/tcp"], check=False, capture_output=True)
+                        time.sleep(1)
+                    except:
+                        pass
+                        
+            except Exception as e:
+                print(f"Warning: Error stopping existing brokers: {e}")
                 pass
             
             # Get the directory where mosquitto.conf is located
@@ -286,6 +308,16 @@ class IoTDataBridge:
                 "-c", str(mosquitto_conf), 
                 "-v"  # verbose mode for debugging
             ]
+            
+            # Final check if port 1883 is available
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(('localhost', 1883))
+            sock.close()
+            
+            if result == 0:
+                print("Error: Port 1883 is still in use after cleanup attempts")
+                print("Please manually stop any MQTT brokers and try again")
+                return False
             
             print(f"Starting mosquitto with command: {' '.join(cmd)}")
             result = subprocess.run(cmd, cwd=str(mosquitto_conf.parent), 
