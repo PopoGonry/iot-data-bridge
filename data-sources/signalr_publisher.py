@@ -86,27 +86,19 @@ async def publish_test_data(hub_url, group_name):
             
             print(f"Cycle #{cycle_count} - Publishing {len(test_cases)} data points...")
             
-            # 모든 데이터를 동시에 전송 (MQTT 방식과 동일)
-            batch_messages = []
-            
-            # 먼저 모든 메시지를 준비
             for i, test_case in enumerate(test_cases, 1):
                 if not running:
                     break
                     
                 print(f"  {i}. {test_case['name']}: {test_case['data']['payload']['VALUE']}")
-                batch_messages.append(test_case['data'])
-            
-            # 준비된 모든 메시지를 동시에 전송
-            if running and batch_messages:
+                
                 try:
-                    # SignalR로 모든 메시지를 한번에 전송 (배치 전송)
-                    connection.send("SendBatchMessages", [group_name, "ingress", json.dumps(batch_messages)])
-                    
-                    # 전송 완료 후 잠시 대기 (연결 안정화)
-                    await asyncio.sleep(0.1)
-                    
+                    # SignalR로 메시지 전송
+                    connection.send("SendMessage", [group_name, "ingress", json.dumps(test_case['data'])])
+                    # 메시지 전송 간격
+                    await asyncio.sleep(0.5)
                 except Exception as e:
+<<<<<<< HEAD
                     print(f"Error sending batch messages, trying individual messages: {e}")
                     # 배치 전송 실패 시 개별 메시지로 전송
                     for i, message_data in enumerate(batch_messages, 1):
@@ -117,6 +109,10 @@ async def publish_test_data(hub_url, group_name):
                         except Exception as e2:
                             print(f"Error sending individual message {i}: {e2}")
                             break
+=======
+                    print(f"Error sending message {i}: {e}")
+                    break
+>>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식)
             
             if running:
                 print(f"Cycle #{cycle_count} completed successfully!")

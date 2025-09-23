@@ -53,6 +53,7 @@ public class IoTHub : Hub
         Console.WriteLine($"Sent to group {groupName}, target {target}: {data}");
     }
 
+<<<<<<< HEAD:reference/middleware/signalr_hub/Program.cs
     public async Task SendBatchMessages(string groupName, string target, string batchMessagesJson)
     {
         try
@@ -72,6 +73,12 @@ public class IoTHub : Hub
             Console.WriteLine($"Error processing batch messages: {ex.Message}");
             throw;
         }
+=======
+    public async Task SendMessage(string message)
+    {
+        await Clients.All.SendAsync("ReceiveMessage", message);
+        Console.WriteLine($"Broadcast message: {message}");
+>>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식):reference/middleware-server/signalr_hub/Program.cs
     }
 
     public override async Task OnConnectedAsync()
