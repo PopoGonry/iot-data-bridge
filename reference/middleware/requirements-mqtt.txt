@@ -1,5 +1,0 @@
-# Middleware Dependencies - MQTT Only
-aiomqtt==2.0.0
-pydantic==2.5.0
-structlog==23.2.0
-pyyaml==6.0.1

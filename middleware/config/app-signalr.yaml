@@ -18,14 +18,13 @@ transports:
   type: "signalr"
   signalr:
     url: "http://localhost:5000/hub"  # localhost로 연결
-    group: "iot_clients"  # 입력 레이어와 같은 그룹으로 변경
-    target: "ingress"      # 입력 레이어가 기다리는 이벤트 이름
+    group: "iot_devices"
     username: null
     password: null
 
 # Logging Configuration
 logging:
-  level: "DEBUG"
+  level: "INFO"
   file: "logs/iot_data_bridge_signalr.log"
   max_size: 10485760  # 10MB
   backup_count: 5
