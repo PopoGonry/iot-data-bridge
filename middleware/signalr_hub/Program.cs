@@ -43,7 +43,7 @@ public class IoTHub : Hub
 
     public async Task SendMessage(string groupName, string target, string message)
     {
-        await Clients.Group(groupName).SendAsync(target, message);
+        await Clients.Group(groupName).SendAsync("ReceiveMessage", message);
         Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
     }
 
