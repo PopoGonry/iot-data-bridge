@@ -245,11 +245,13 @@ class SignalRInputHandler:
         self.last_message_time = time.time()
         message = None
         try:
+            self.logger.debug("SignalR message received", args_count=len(args), args=args)
             if not args:
                 self.logger.warning("Empty SignalR message")
                 return
 
             first = args[0]
+            self.logger.debug("Processing message", first_arg=first, first_type=type(first))
             # Normalize payload
             if isinstance(first, str):
                 payload = json.loads(first)
