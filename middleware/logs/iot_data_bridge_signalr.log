@@ -1,0 +1,25 @@
+Mapping catalog loaded
+Device catalog loaded
+Failed to pre-warm connections
+Optimized logging layer started with batch processing
+SignalR connection error
+SignalR input handler stopped
+SignalR input handler stopped
+Task exception was never retrieved
+future: <Task finished name='Task-4' coro=<IoTDataBridge.stop() done, defined at C:\git\iot-data-bridge\middleware\src\main_signalr.py:362> exception=ConnectionError(MaxRetryError("HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /hub/negotiate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002324B28DBD0>: Failed to establish a new connection: [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다'))"))>
+Traceback (most recent call last):
+  File "C:\git\iot-data-bridge\middleware\src\main_signalr.py", line 353, in start
+    await asyncio.sleep(1)
+  File "C:\Users\rhtjd\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 718, in sleep
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\git\iot-data-bridge\middleware\src\main_signalr.py", line 368, in stop
+    await self.input_layer.stop()
+  File "C:\git\iot-data-bridge\middleware\src\layers\input_signalr.py", line 270, in stop
+    await self._task
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries exceeded with url: /hub/negotiate (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002324B28DBD0>: Failed to establish a new connection: [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다'))

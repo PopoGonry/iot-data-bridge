@@ -1,13 +1,49 @@
 #!/usr/bin/env python3
 """
-IoT Data Bridge - SignalR Main Entry Point
+IoT Data Bridge - SignalR Main Entry Point (Optimized)
 """
 
 import asyncio
 import logging
 import signal
 import sys
+import subprocess
 from pathlib import Path
+
+# Check and install dependencies
+def check_and_install_dependencies():
+    """Check and install required dependencies"""
+    required_packages = [
+        'aiofiles',
+        'psutil',
+        'signalrcore',
+        'pydantic',
+        'structlog',
+        'pyyaml'
+    ]
+    
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print(f"Installing missing dependencies: {', '.join(missing_packages)}")
+        try:
+            subprocess.check_call([
+                sys.executable, '-m', 'pip', 'install'
+            ] + missing_packages)
+            print("Dependencies installed successfully!")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to install dependencies: {e}")
+            print("Please install manually: pip install -r requirements-signalr.txt")
+            sys.exit(1)
+
+# Check dependencies before importing other modules
+check_and_install_dependencies()
 
 import structlog
 import yaml
