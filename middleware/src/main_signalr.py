@@ -15,7 +15,7 @@ import yaml
 from layers.input_signalr import InputLayer
 from layers.mapping import MappingLayer
 from layers.resolver import ResolverLayer
-from layers.transports_signalr import TransportsLayer
+from layers.transports_signalr import TransportLayer
 from layers.logging import LoggingLayer
 from catalogs.mapping_catalog import MappingCatalog
 from catalogs.device_catalog import DeviceCatalog
@@ -232,7 +232,7 @@ class IoTDataBridge:
         )
         
         # Initialize transports layer
-        self.transports_layer = TransportsLayer(
+        self.transports_layer = TransportLayer(
             self.config.transports,
             self.device_catalog,
             self._handle_device_ingest
