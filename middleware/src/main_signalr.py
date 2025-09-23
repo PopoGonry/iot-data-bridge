@@ -7,7 +7,6 @@ import asyncio
 import logging
 import signal
 import sys
-import time
 from pathlib import Path
 
 import structlog
@@ -178,10 +177,10 @@ class IoTDataBridge:
             self._handle_mapped_event
         )
         
-        # Initialize resolver layer (로깅 콜백 없음)
+        # Initialize resolver layer
         self.resolver_layer = ResolverLayer(
             self.device_catalog,
-            None  # 로깅 콜백 비활성화
+            self._handle_resolved_event
         )
         
         # Initialize transports layer
@@ -196,7 +195,7 @@ class IoTDataBridge:
             self.config.logging
         )
         
-        # Set up layer callbacks (올바른 콜백 설정)
+        # Set up layer callbacks
         self.resolver_layer.set_transports_callback(self._handle_resolved_event)
     
     def _start_signalr_hub(self):
@@ -259,50 +258,18 @@ class IoTDataBridge:
     
     async def _handle_ingress_event(self, event: IngressEvent):
         """Handle ingress event from input layer"""
-        print(f"[DEBUG] _handle_ingress_event START: {event.trace_id}")
-        print(f"[DEBUG] Ingress event raw data: {event.raw}")
-        print(f"[DEBUG] Ingress event meta: {event.meta}")
-        try:
-            print(f"[DEBUG] Calling mapping_layer.map_event for: {event.trace_id}")
-            await self.mapping_layer.map_event(event)
-            print(f"[DEBUG] _handle_ingress_event COMPLETED: {event.trace_id}")
-        except Exception as e:
-            print(f"[DEBUG] ERROR in _handle_ingress_event: {e}")
-            import traceback
-            print(f"[DEBUG] _handle_ingress_event traceback: {traceback.format_exc()}")
-            raise
+        # No console log - only file log
+        await self.mapping_layer.map_event(event)
     
     async def _handle_mapped_event(self, event: MappedEvent):
         """Handle mapped event from mapping layer"""
-        print(f"[DEBUG] _handle_mapped_event START: {event.trace_id}")
-        print(f"[DEBUG] Mapped event object: {event.object}")
-        print(f"[DEBUG] Mapped event value: {event.value}")
-        print(f"[DEBUG] Mapped event device_id: {event.device_id}")
-        try:
-            print(f"[DEBUG] Calling resolver_layer.resolve_event for: {event.trace_id}")
-            await self.resolver_layer.resolve_event(event)
-            print(f"[DEBUG] _handle_mapped_event COMPLETED: {event.trace_id}")
-        except Exception as e:
-            print(f"[DEBUG] ERROR in _handle_mapped_event: {e}")
-            import traceback
-            print(f"[DEBUG] _handle_mapped_event traceback: {traceback.format_exc()}")
-            raise
+        # No console log - only file log
+        await self.resolver_layer.resolve_event(event)
     
     async def _handle_resolved_event(self, event: ResolvedEvent):
         """Handle resolved event from resolver layer"""
-        print(f"[DEBUG] _handle_resolved_event START: {event.trace_id}")
-        print(f"[DEBUG] Resolved event target_devices: {event.target_devices}")
-        print(f"[DEBUG] Resolved event object: {event.object}")
-        print(f"[DEBUG] Resolved event value: {event.value}")
-        try:
-            print(f"[DEBUG] Calling transports_layer.send_to_devices for: {event.trace_id}")
-            await self.transports_layer.send_to_devices(event)
-            print(f"[DEBUG] _handle_resolved_event COMPLETED: {event.trace_id}")
-        except Exception as e:
-            print(f"[DEBUG] ERROR in _handle_resolved_event: {e}")
-            import traceback
-            print(f"[DEBUG] _handle_resolved_event traceback: {traceback.format_exc()}")
-            raise
+        # No console log - only file log
+        await self.transports_layer.send_to_devices(event)
     
     async def _handle_device_ingest(self, event: DeviceIngestLog):
         """Handle device ingest log"""
@@ -320,119 +287,35 @@ class IoTDataBridge:
             await self.transports_layer.start()
             await self.logging_layer.start()
             
-            print("IoT Data Bridge started successfully!")
-            print("Press Ctrl+C to stop")
-            
-            # Keep running with timeout
-            loop_count = 0
+            # Keep running
             while self.is_running:
-                loop_count += 1
-                if loop_count % 10 == 0:  # Every 10 seconds
-                    print(f"[DEBUG] Main loop running... count: {loop_count}")
-                    # Check layer states
-                    print(f"[DEBUG] Layer states - Input: {getattr(self.input_layer, 'is_running', 'N/A')}, "
-                          f"Mapping: {getattr(self.mapping_layer, 'is_running', 'N/A')}, "
-                          f"Resolver: {getattr(self.resolver_layer, 'is_running', 'N/A')}, "
-                          f"Transports: {getattr(self.transports_layer, 'is_running', 'N/A')}")
-                    
-                    # Check SignalR connection status
-                    if hasattr(self.input_layer, 'handler') and self.input_layer.handler:
-                        handler = self.input_layer.handler
-                        last_msg_time = getattr(handler, 'last_message_time', 0)
-                        current_time = time.time()
-                        time_since_last_msg = current_time - last_msg_time if last_msg_time > 0 else 0
-                        print(f"[DEBUG] SignalR last message: {time_since_last_msg:.1f}s ago")
-                        
-                        # Check if SignalR connection is still active
-                        if hasattr(handler, 'connection') and handler.connection:
-                            try:
-                                # Try to check connection status
-                                if hasattr(handler.connection, 'transport') and hasattr(handler.connection.transport, '_ws'):
-                                    if handler.connection.transport._ws and handler.connection.transport._ws.sock:
-                                        print(f"[DEBUG] SignalR connection: ACTIVE")
-                                        # Check if connection is actually receiving data
-                                        if time_since_last_msg > 30:  # More than 30 seconds without data
-                                            print(f"[DEBUG] WARNING: No data received for {time_since_last_msg:.1f}s - connection may be stuck")
-                                            # Try to trigger reconnection
-                                            if hasattr(handler, '_attempt_reconnection'):
-                                                print(f"[DEBUG] Attempting to reconnect SignalR input connection...")
-                                                try:
-                                                    # Schedule reconnection in the event loop
-                                                    asyncio.create_task(handler._attempt_reconnection())
-                                                except Exception as e:
-                                                    print(f"[DEBUG] Failed to schedule reconnection: {e}")
-                                    else:
-                                        print(f"[DEBUG] SignalR connection: INACTIVE - WebSocket closed")
-                                else:
-                                    print(f"[DEBUG] SignalR connection: UNKNOWN state")
-                            except Exception as e:
-                                print(f"[DEBUG] SignalR connection check error: {e}")
-                        else:
-                            print(f"[DEBUG] SignalR connection: NOT INITIALIZED")
-                
-                try:
-                    await asyncio.wait_for(asyncio.sleep(1), timeout=1.0)
-                except asyncio.TimeoutError:
-                    print(f"[DEBUG] Main loop timeout at count {loop_count}")
-                    continue
-                except Exception as e:
-                    print(f"[DEBUG] Error in main loop at count {loop_count}: {e}")
-                    import traceback
-                    print(f"[DEBUG] Main loop traceback: {traceback.format_exc()}")
-                    break
+                await asyncio.sleep(1)
                 
         except KeyboardInterrupt:
-            print("\nKeyboard interrupt received")
+            pass
         except Exception as e:
             print(f"Error in main loop: {e}")
         finally:
-            print("Stopping IoT Data Bridge...")
             await self.stop()
     
     async def stop(self):
         """Stop the IoT Data Bridge"""
         self.is_running = False
         
-        print("Stopping all layers...")
-        
-        # Stop all layers with timeout
-        try:
-            if self.input_layer:
-                await asyncio.wait_for(self.input_layer.stop(), timeout=5.0)
-        except Exception as e:
-            print(f"Error stopping input layer: {e}")
-        
-        try:
-            if self.mapping_layer:
-                await asyncio.wait_for(self.mapping_layer.stop(), timeout=5.0)
-        except Exception as e:
-            print(f"Error stopping mapping layer: {e}")
-        
-        try:
-            if self.resolver_layer:
-                await asyncio.wait_for(self.resolver_layer.stop(), timeout=5.0)
-        except Exception as e:
-            print(f"Error stopping resolver layer: {e}")
-        
-        try:
-            if self.transports_layer:
-                await asyncio.wait_for(self.transports_layer.stop(), timeout=5.0)
-        except Exception as e:
-            print(f"Error stopping transports layer: {e}")
-        
-        try:
-            if self.logging_layer:
-                await asyncio.wait_for(self.logging_layer.stop(), timeout=5.0)
-        except Exception as e:
-            print(f"Error stopping logging layer: {e}")
+        # Stop all layers
+        if self.input_layer:
+            await self.input_layer.stop()
+        if self.mapping_layer:
+            await self.mapping_layer.stop()
+        if self.resolver_layer:
+            await self.resolver_layer.stop()
+        if self.transports_layer:
+            await self.transports_layer.stop()
+        if self.logging_layer:
+            await self.logging_layer.stop()
         
         # Stop SignalR hub
-        try:
-            self._stop_signalr_hub()
-        except Exception as e:
-            print(f"Error stopping SignalR hub: {e}")
-        
-        print("IoT Data Bridge stopped successfully!")
+        self._stop_signalr_hub()
 
 
 async def main():
@@ -446,16 +329,7 @@ async def main():
     
     # Setup signal handlers
     def signal_handler(signum, frame):
-        print(f"\nReceived signal {signum}, shutting down...")
-        bridge.is_running = False
-        # Force stop all layers
-        try:
-            if bridge.input_layer:
-                bridge.input_layer.is_running = False
-            if bridge.transports_layer:
-                bridge.transports_layer.is_running = False
-        except:
-            pass
+        asyncio.create_task(bridge.stop())
     
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)

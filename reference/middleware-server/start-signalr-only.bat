@@ -1,13 +1,13 @@
 @echo off
-REM Middleware Start Script for Windows - SignalR Only
+REM IoT Data Bridge Middleware Server Start Script (SignalR Only)
 
 REM Change to the directory where this script is located
 cd /d "%~dp0"
 
 echo ========================================
-echo    IoT Data Bridge - Middleware (SignalR)
+echo    IoT Data Bridge - Middleware (SignalR Only)
 echo ========================================
-echo.
+echo
 
 REM Check if Python is available
 python --version >nul 2>&1
@@ -52,31 +52,35 @@ if %ERRORLEVEL% neq 0 set MISSING_PACKAGES=1
 
 if %MISSING_PACKAGES%==1 (
     echo Installing missing dependencies...
-    echo Using requirements-signalr.txt for SignalR-specific dependencies...
-    pip install -r requirements-signalr.txt
+    pip install -r requirements.txt
     if %ERRORLEVEL% neq 0 (
-        echo Error: Failed to install dependencies from requirements-signalr.txt
-        echo Trying fallback to requirements.txt...
-        pip install -r requirements.txt
-        if %ERRORLEVEL% neq 0 (
-            echo Error: Failed to install dependencies
-            echo Please check your Python environment and internet connection
-            pause
-            exit /b 1
-        )
+        echo Error: Failed to install dependencies
+        echo Please check your Python environment and internet connection
+        pause
+        exit /b 1
     )
     echo Dependencies installed successfully!
 ) else (
     echo All required dependencies are already installed.
 )
 
-echo.
-echo Starting IoT Data Bridge Middleware (SignalR)...
-echo.
+echo Starting IoT Data Bridge Middleware Server (SignalR Only)...
 
-REM Start the middleware
-python src/main_signalr.py
+REM Create logs directory
+if not exist logs mkdir logs
 
-echo.
-echo Middleware stopped.
+REM Start SignalR Hub
+echo Starting SignalR Hub...
+cd signalr_hub
+start /B dotnet run
+cd ..
+
+REM Wait a moment for SignalR Hub to start
+timeout /t 5 /nobreak > nul
+
+REM Start IoT Data Bridge (SignalR Only)
+echo Starting IoT Data Bridge (SignalR Only)...
+python src/main.py --config config/app-signalr.yaml
+
+echo All services started!
 pause

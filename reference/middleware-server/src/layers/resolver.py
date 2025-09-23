@@ -26,16 +26,21 @@ class ResolverLayer(ResolverLayerInterface):
     
     async def start(self):
         """Start resolver layer"""
+        self.logger.info("Starting resolver layer")
         self.is_running = True
+        self.logger.info("Resolver layer started")
     
     async def stop(self):
         """Stop resolver layer"""
+        self.logger.info("Stopping resolver layer")
         self.is_running = False
+        self.logger.info("Resolver layer stopped")
     
     async def resolve_event(self, event: MappedEvent) -> Optional[ResolvedEvent]:
         """Resolve mapped event to target devices"""
         try:
             self._increment_processed()
+            
             
             # Get target devices for the object
             target_devices = self.device_catalog.get_devices_for_object(event.object)
@@ -52,6 +57,11 @@ class ResolverLayer(ResolverLayerInterface):
                 target_devices=target_devices
             )
             
+            self.logger.debug("Successfully resolved event",
+                            trace_id=event.trace_id,
+                            object=event.object,
+                            target_devices=target_devices)
+            
             # Log middleware event
             await self._log_middleware_event(event, target_devices)
             
@@ -66,8 +76,6 @@ class ResolverLayer(ResolverLayerInterface):
             self.logger.error("Error resolving event", 
                             error=str(e), 
                             trace_id=event.trace_id)
-            import traceback
-            self.logger.error("Traceback", traceback=traceback.format_exc())
             return None
     
     async def _log_middleware_event(self, event: MappedEvent, target_devices: list):
@@ -85,5 +93,6 @@ class ResolverLayer(ResolverLayerInterface):
             await self.logging_callback(middleware_log)
             
         except Exception as e:
-            # Silent error handling
-            pass
+            self.logger.error("Error logging middleware event", 
+                            error=str(e), 
+                            trace_id=event.trace_id)

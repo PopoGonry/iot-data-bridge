@@ -55,7 +55,11 @@ class MQTTTransport:
                 )
                 
             
-            # Log removed - only file log will show Data sent
+            self.logger.info("디바이스로 메시지 전송",
+                            device_id=device_target.device_id,
+                            topic=topic,
+                            object=device_target.object,
+                            value=device_target.value)
             
             return True
             
@@ -80,11 +84,15 @@ class TransportsLayer(TransportsLayerInterface):
     async def start(self):
         """Start transports layer"""
         try:
+            self.logger.info("Starting MQTT transports layer")
+            
             if not self.config.mqtt:
                 raise ValueError("MQTT configuration is required")
             
             self.transport = MQTTTransport(self.config.mqtt)
             self.is_running = True
+            
+            self.logger.info("MQTT transports layer started successfully")
             
         except Exception as e:
             self.logger.error("Failed to start MQTT transports layer", error=str(e))
@@ -92,7 +100,9 @@ class TransportsLayer(TransportsLayerInterface):
     
     async def stop(self):
         """Stop transports layer"""
+        self.logger.info("Stopping MQTT transports layer")
         self.is_running = False
+        self.logger.info("MQTT transports layer stopped")
     
     async def send_to_devices(self, event: ResolvedEvent):
         """Send resolved event to target devices"""
@@ -130,33 +140,27 @@ class TransportsLayer(TransportsLayerInterface):
             success_count = 0
             for device_target in device_targets:
                 try:
-                    # No console log - only file log
-                    
                     success = await self.transport.send_to_device(device_target)
                     if success:
                         success_count += 1
-                        # No console log - only file log
                         
                         # Log device ingest
                         ingest_log = DeviceIngestLog(
-                            trace_id=event.trace_id,
                             device_id=device_target.device_id,
                             object=device_target.object,
                             value=device_target.value
                         )
                         await self.device_ingest_callback(ingest_log)
-                    else:
-                        self.logger.warning("TRANSPORTS LAYER: Failed to deliver to device", 
-                                          trace_id=event.trace_id,
-                                          device_id=device_target.device_id)
                         
                 except Exception as e:
-                    self.logger.error("TRANSPORTS LAYER: Error delivering to device",
-                                    trace_id=event.trace_id,
+                    self.logger.error("Error sending to device",
                                     device_id=device_target.device_id,
                                     error=str(e))
             
-            # No console log - only file log
+            self.logger.info("Sent to devices",
+                           trace_id=event.trace_id,
+                           total_devices=len(device_targets),
+                           success_count=success_count)
             
         except Exception as e:
             self._increment_error()

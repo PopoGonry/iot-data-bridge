@@ -1,12 +1,8 @@
 #!/bin/bash
-# Middleware Start Script for Linux/macOS - SignalR Only
-
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+# IoT Data Bridge Middleware Server Start Script (SignalR Only)
 
 echo "========================================"
-echo "   IoT Data Bridge - Middleware (SignalR)"
+echo "   IoT Data Bridge - Middleware (SignalR Only)"
 echo "========================================"
 echo
 
@@ -16,6 +12,24 @@ if ! command -v python3 &> /dev/null; then
     echo "Please install Python 3.11+ and try again"
     exit 1
 fi
+
+echo "Starting IoT Data Bridge Middleware Server (SignalR Only)..."
+
+# Check if virtual environment exists and activate it
+if [ -d ".venv" ]; then
+    echo "Activating virtual environment..."
+    source .venv/bin/activate
+elif [ -d "venv" ]; then
+    echo "Activating virtual environment..."
+    source venv/bin/activate
+elif [ -n "$VIRTUAL_ENV" ]; then
+    echo "Virtual environment already active: $VIRTUAL_ENV"
+else
+    echo "Warning: No virtual environment found. Using system Python."
+fi
+
+# Create logs directory
+mkdir -p logs
 
 # Check if .NET SDK is available
 echo "Checking .NET SDK..."
@@ -90,30 +104,45 @@ fi
 
 if [ $MISSING_PACKAGES -eq 1 ]; then
     echo "Installing missing dependencies..."
-    echo "Using requirements-signalr.txt for SignalR-specific dependencies..."
-    pip3 install -r requirements-signalr.txt
+    pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
-        echo "Error: Failed to install dependencies from requirements-signalr.txt"
-        echo "Trying fallback to requirements.txt..."
-        pip3 install -r requirements.txt
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to install dependencies"
-            echo "Please check your Python environment and internet connection"
-            echo "You may need to run: pip3 install --upgrade pip"
-            exit 1
-        fi
+        echo "Error: Failed to install dependencies"
+        echo "Please check your Python environment and internet connection"
+        echo "You may need to run: pip3 install --upgrade pip"
+        exit 1
     fi
     echo "Dependencies installed successfully!"
 else
     echo "All required dependencies are already installed."
 fi
 
-echo
-echo "Starting IoT Data Bridge Middleware (SignalR)..."
-echo
+# Start SignalR Hub
+echo "Starting SignalR Hub..."
+if command -v dotnet &> /dev/null; then
+    cd signalr_hub
+    dotnet run &
+    cd ..
+    echo "SignalR Hub started"
+    
+    # Wait a moment for SignalR Hub to start
+    sleep 5
+    
+    # Start IoT Data Bridge (SignalR Only)
+    echo "Starting IoT Data Bridge (SignalR Only)..."
+    
+    # Try python3 first, then python
+    if command -v python3 &> /dev/null; then
+        python3 src/main_signalr.py
+    elif command -v python &> /dev/null; then
+        python src/main_signalr.py
+    else
+        echo "Error: Python not found. Please install Python 3.8 or higher."
+        exit 1
+    fi
+else
+    echo "Error: dotnet not found. Please install .NET SDK:"
+    echo "https://dotnet.microsoft.com/download"
+    exit 1
+fi
 
-# Start the middleware
-python3 src/main_signalr.py
-
-echo
-echo "Middleware stopped."
+echo "All services started!"

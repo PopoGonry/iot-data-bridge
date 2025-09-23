@@ -1,0 +1,36 @@
+# Mapping Catalog - Maps (equip_tag, message_id) to object and value_type
+mappings:
+  - equip_tag: "GPS001"
+    message_id: "GLL001"
+    object: "Geo.Latitude"
+    value_type: float
+    
+  - equip_tag: "GPS001"
+    message_id: "GLL002"
+    object: "Geo.Longitude"
+    value_type: float
+    
+  - equip_tag: "GPS001"
+    message_id: "GLL003"
+    object: "Geo.Altitude"
+    value_type: float
+    
+  - equip_tag: "ENG001"
+    message_id: "RPM001"
+    object: "Engine1.SpeedRpm"
+    value_type: int
+    
+  - equip_tag: "ENG001"
+    message_id: "TEMP001"
+    object: "Engine1.Temperature"
+    value_type: float
+    
+  - equip_tag: "SENSOR001"
+    message_id: "HUM001"
+    object: "Environment.Humidity"
+    value_type: float
+    
+  - equip_tag: "SENSOR001"
+    message_id: "TEMP001"
+    object: "Environment.Temperature"
+    value_type: float

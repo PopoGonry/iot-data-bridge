@@ -28,9 +28,6 @@ def signal_handler(signum, frame):
     global running
     print("\nShutting down data publisher...")
     running = False
-    # 강제 종료를 위한 추가 처리
-    import os
-    os._exit(0)
 
 
 async def publish_test_data(hub_url, group_name):
@@ -41,7 +38,6 @@ async def publish_test_data(hub_url, group_name):
         sys.exit(1)
     
     interval = 5  # 5초마다 데이터 전송
-    connection = None
     
     print(f"Starting IoT Data Publisher (SignalR)")
     print(f"Connecting to SignalR hub at {hub_url}")
@@ -51,7 +47,7 @@ async def publish_test_data(hub_url, group_name):
     print()
     
     try:
-        # SignalR Hub 연결 설정 (단일 연결)
+        # SignalR Hub 연결 설정
         connection = HubConnectionBuilder() \
             .with_url(hub_url) \
             .build()
@@ -86,68 +82,52 @@ async def publish_test_data(hub_url, group_name):
             
             print(f"Cycle #{cycle_count} - Publishing {len(test_cases)} data points...")
             
+            # 모든 데이터를 동시에 전송 (MQTT 방식과 동일)
+            batch_messages = []
+            
+            # 먼저 모든 메시지를 준비
             for i, test_case in enumerate(test_cases, 1):
                 if not running:
                     break
                     
                 print(f"  {i}. {test_case['name']}: {test_case['data']['payload']['VALUE']}")
-                
+                batch_messages.append(test_case['data'])
+            
+            # 준비된 모든 메시지를 동시에 전송
+            if running and batch_messages:
                 try:
-                    # SignalR로 메시지 전송
-                    connection.send("SendMessage", [group_name, "ingress", json.dumps(test_case['data'])])
-                    # 메시지 전송 간격
-                    await asyncio.sleep(0.5)
+                    # SignalR로 모든 메시지를 한번에 전송 (배치 전송)
+                    connection.send("SendBatchMessages", [group_name, "ingress", json.dumps(batch_messages)])
+                    
+                    # 전송 완료 후 잠시 대기 (연결 안정화)
+                    await asyncio.sleep(0.1)
+                    
                 except Exception as e:
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
                     print(f"Error sending batch messages, trying individual messages: {e}")
                     # 배치 전송 실패 시 개별 메시지로 전송
                     for i, message_data in enumerate(batch_messages, 1):
-                        if not running:
-                            break
                         try:
                             connection.send("SendMessage", [group_name, "ingress", json.dumps(message_data)])
                         except Exception as e2:
                             print(f"Error sending individual message {i}: {e2}")
                             break
-=======
-                    print(f"Error sending message {i}: {e}")
-                    break
->>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식)
-=======
-                    print(f"Error sending message {i}: {e}")
-                    break
->>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식)
-=======
-                    print(f"Error sending message {i}: {e}")
-                    break
->>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식)
             
             if running:
                 print(f"Cycle #{cycle_count} completed successfully!")
                 print(f"Waiting {interval} seconds for next cycle...")
                 print("-" * 50)
                 
-                # Wait for next cycle (running 체크 포함)
-                for _ in range(interval):
-                    if not running:
-                        break
-                    await asyncio.sleep(1)
+                # Wait for next cycle
+                await asyncio.sleep(interval)
+        
+        # 그룹에서 나가기
+        connection.send("LeaveGroup", [group_name])
+        connection.stop()
+        print("Data publisher stopped.")
         
     except Exception as e:
         print(f"Error: {e}")
         print(f"Make sure SignalR hub is running on {hub_url}")
-    finally:
-        # 안전한 종료 처리
-        if connection:
-            try:
-                print("Cleaning up SignalR connection...")
-                connection.send("LeaveGroup", [group_name])
-                connection.stop()
-                print("Data publisher stopped.")
-            except Exception as e:
-                print(f"Error during cleanup: {e}")
 
 
 async def main():
@@ -165,8 +145,8 @@ async def main():
     # Build SignalR URL
     hub_url = f"http://{signalr_host}:{signalr_port}/hub"
     
-    # Group name for data sources (separate from middleware)
-    group_name = "data_sources"
+    # Group name is always iot_clients for data sources
+    group_name = "iot_clients"
     
     print(f"SignalR Host: {signalr_host}")
     print(f"SignalR Port: {signalr_port}")
