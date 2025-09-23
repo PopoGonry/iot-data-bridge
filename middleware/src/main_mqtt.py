@@ -374,8 +374,9 @@ class IoTDataBridge:
                 "-v"  # verbose mode for debugging
             ]
             
-            # Wait a bit more for processes to fully stop
-            time.sleep(2)
+            # Wait longer for processes to fully stop and port to be released
+            print("   ⏳ Waiting for port to be fully released...")
+            time.sleep(5)
             
             # Final check if port 1883 is available with retries and detailed diagnostics
             max_retries = 5
@@ -447,27 +448,46 @@ class IoTDataBridge:
                 print("   sudo lsof -ti:1883 | xargs sudo kill -9")
                 return False
             
-            print(f"Starting mosquitto with command: {' '.join(cmd)}")
-            result = subprocess.run(cmd, cwd=str(mosquitto_conf.parent), 
-                                  capture_output=True, text=True, timeout=10)
+            # Additional wait and final port check before starting mosquitto
+            print("   ⏳ Final wait before starting mosquitto...")
+            time.sleep(2)
             
-            if result.returncode == 0:
-                print("MQTT broker started successfully")
-                # Wait a moment for broker to initialize
-                time.sleep(2)
+            # One more port check
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            final_check = sock.connect_ex(('localhost', 1883))
+            sock.close()
+            
+            if final_check == 0:
+                print("   ❌ Port 1883 is still in use at final check, waiting more...")
+                time.sleep(3)
+            
+            print(f"Starting mosquitto with command: {' '.join(cmd)}")
+            
+            # Start mosquitto in background instead of blocking
+            try:
+                process = subprocess.Popen(cmd, cwd=str(mosquitto_conf.parent), 
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                        text=True)
                 
-                # Verify broker is listening on correct interface
-                if self._verify_mqtt_broker():
-                    print("MQTT broker verification successful")
+                # Wait a moment for mosquitto to start
+                time.sleep(3)
+                
+                # Check if process is still running
+                if process.poll() is None:
+                    print("✅ MQTT broker started successfully in background")
                     return True
                 else:
-                    print("Warning: MQTT broker may not be listening on all interfaces")
+                    stdout, stderr = process.communicate()
+                    print("❌ MQTT broker failed to start:")
+                    print(f"STDOUT: {stdout}")
+                    print(f"STDERR: {stderr}")
                     return False
-            else:
-                print(f"Failed to start MQTT broker:")
-                print(f"STDOUT: {result.stdout}")
-                print(f"STDERR: {result.stderr}")
+                    
+            except Exception as e:
+                print(f"❌ Error starting mosquitto: {e}")
                 return False
+            
                 
         except FileNotFoundError:
             print("Error: mosquitto not found. Please install mosquitto:")

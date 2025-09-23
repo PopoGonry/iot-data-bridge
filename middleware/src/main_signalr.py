@@ -286,8 +286,9 @@ class IoTDataBridge:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
                 return False
             
-            # Wait a bit more for processes to fully stop
-            await asyncio.sleep(2)
+            # Wait longer for processes to fully stop and port to be released
+            print("   ⏳ Waiting for port to be fully released...")
+            await asyncio.sleep(5)
             
             # Final check if port 5000 is available with retries and detailed diagnostics
             max_retries = 5
@@ -347,6 +348,20 @@ class IoTDataBridge:
                 print("   sudo fuser -k 5000/tcp")
                 print("   sudo netstat -tlnp | grep 5000")
                 return False
+            
+            # Additional wait and final port check before starting SignalR hub
+            print("   ⏳ Final wait before starting SignalR hub...")
+            await asyncio.sleep(2)
+            
+            # One more port check
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            final_check = sock.connect_ex(('localhost', 5000))
+            sock.close()
+            
+            if final_check == 0:
+                print("   ❌ Port 5000 is still in use at final check, waiting more...")
+                await asyncio.sleep(3)
             
             print(f"Starting SignalR hub from: {signalr_hub_dir}")
             
