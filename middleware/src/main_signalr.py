@@ -61,7 +61,53 @@ class IoTDataBridge:
             # Start SignalR hub
             hub_started = await self._start_signalr_hub()
             if not hub_started:
-                print("Warning: SignalR hub failed to start. Continuing without hub...")
+                print("❌ SignalR hub failed to start. Trying alternative approaches...")
+                
+                # Try manual start with different options
+                try:
+                    print("   🔄 Trying manual dotnet start...")
+                    import subprocess
+                    import os
+                    
+                    # Try to start with explicit configuration
+                    signalr_hub_dir = Path("signalr_hub")
+                    if signalr_hub_dir.exists():
+                        print(f"   📁 Found signalr_hub directory: {signalr_hub_dir.absolute()}")
+                        
+                        # Try with explicit port binding
+                        env = os.environ.copy()
+                        env['ASPNETCORE_URLS'] = 'http://localhost:5000'
+                        env['ASPNETCORE_ENVIRONMENT'] = 'Development'
+                        
+                        manual_result = subprocess.Popen([
+                            "dotnet", "run", "--urls", "http://localhost:5000"
+                        ], cwd=str(signalr_hub_dir), env=env, 
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                        
+                        # Wait a bit and check
+                        await asyncio.sleep(3)
+                        
+                        if manual_result.poll() is None:
+                            print("   ✅ Manual start successful")
+                            if await self._verify_hub_connection():
+                                print("✅ SignalR hub is now responding on port 5000")
+                                hub_started = True
+                            else:
+                                print("   ⚠️  Manual start succeeded but hub not responding")
+                        else:
+                            stdout, stderr = manual_result.communicate()
+                            print(f"   ❌ Manual start failed:")
+                            print(f"STDOUT: {stdout}")
+                            print(f"STDERR: {stderr}")
+                            
+                except Exception as e:
+                    print(f"   ❌ Manual start attempt failed: {e}")
+                
+                if not hub_started:
+                    print("⚠️  Continuing without SignalR hub...")
+                    print("💡 You can try starting the hub manually:")
+                    print("   cd middleware/signalr_hub")
+                    print("   dotnet run")
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -365,28 +411,71 @@ class IoTDataBridge:
             
             print(f"Starting SignalR hub from: {signalr_hub_dir}")
             
-            # Start SignalR hub in background
+            # Start SignalR hub in background with more detailed output
+            print(f"   🔧 Starting dotnet run in directory: {signalr_hub_dir}")
             result = subprocess.Popen([
-                "dotnet", "run"
-            ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                "dotnet", "run", "--verbosity", "normal"
+            ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             
-            # Wait for hub to start asynchronously
-            await asyncio.sleep(3)
+            # Wait for hub to start with longer timeout
+            print("   ⏳ Waiting for SignalR hub to start...")
+            await asyncio.sleep(5)
             
             # Check if process is still running
             if result.poll() is None:
-                # Verify hub is actually listening on port 5000
-                if await self._verify_hub_connection():
-                    print("SignalR hub started successfully and is listening on port 5000")
-                    return True
-                else:
-                    print("SignalR hub process started but not responding on port 5000")
-                    return False
+                print("   ✅ dotnet process is running")
+                
+                # Check stdout/stderr for any immediate errors
+                try:
+                    # Non-blocking read of available output
+                    import select
+                    import sys
+                    
+                    # Check if there's any output available
+                    if hasattr(select, 'select'):
+                        ready, _, _ = select.select([result.stdout, result.stderr], [], [], 0.1)
+                        if ready:
+                            for stream in ready:
+                                if stream == result.stdout:
+                                    output = stream.read()
+                                    if output:
+                                        print(f"   📤 STDOUT: {output}")
+                                elif stream == result.stderr:
+                                    output = stream.read()
+                                    if output:
+                                        print(f"   📤 STDERR: {output}")
+                except:
+                    pass
+                
+                # Verify hub is actually listening on port 5000 with retries
+                print("   🔍 Verifying SignalR hub connection...")
+                max_verification_attempts = 5
+                for attempt in range(max_verification_attempts):
+                    if await self._verify_hub_connection():
+                        print("✅ SignalR hub started successfully and is listening on port 5000")
+                        return True
+                    else:
+                        print(f"   ⏳ Hub not ready yet (attempt {attempt + 1}/{max_verification_attempts})")
+                        await asyncio.sleep(2)
+                
+                print("❌ SignalR hub process started but not responding on port 5000 after verification attempts")
+                
+                # Get final output for debugging
+                try:
+                    stdout, stderr = result.communicate(timeout=1)
+                    if stdout:
+                        print(f"   📤 Final STDOUT: {stdout}")
+                    if stderr:
+                        print(f"   📤 Final STDERR: {stderr}")
+                except:
+                    pass
+                
+                return False
             else:
                 stdout, stderr = result.communicate()
-                print(f"Failed to start SignalR hub:")
-                print(f"STDOUT: {stdout.decode()}")
-                print(f"STDERR: {stderr.decode()}")
+                print(f"❌ Failed to start SignalR hub:")
+                print(f"STDOUT: {stdout}")
+                print(f"STDERR: {stderr}")
                 return False
                 
         except FileNotFoundError:
@@ -400,6 +489,7 @@ class IoTDataBridge:
         """Verify that SignalR hub is actually listening on port 5000"""
         import socket
         import asyncio
+        import requests
         
         try:
             # Try to connect to port 5000
@@ -412,8 +502,36 @@ class IoTDataBridge:
             
             # Run the check in a thread to avoid blocking
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, check_port)
-            return result
+            port_open = await loop.run_in_executor(None, check_port)
+            
+            if not port_open:
+                return False
+            
+            # Try to make HTTP request to verify it's actually the SignalR hub
+            try:
+                def check_http():
+                    response = requests.get('http://localhost:5000/health', timeout=3)
+                    return response.status_code == 200 and response.text.strip() == 'OK'
+                
+                http_ok = await loop.run_in_executor(None, check_http)
+                if http_ok:
+                    return True
+            except:
+                pass
+            
+            # Fallback: try the root endpoint
+            try:
+                def check_root():
+                    response = requests.get('http://localhost:5000/', timeout=3)
+                    return response.status_code == 200 and 'SignalR Hub' in response.text
+                
+                root_ok = await loop.run_in_executor(None, check_root)
+                if root_ok:
+                    return True
+            except:
+                pass
+            
+            return False
             
         except Exception as e:
             print(f"Hub connection verification failed: {e}")

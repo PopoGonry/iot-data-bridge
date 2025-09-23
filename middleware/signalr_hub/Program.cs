@@ -24,6 +24,14 @@ app.MapHub<IoTHub>("/hub");
 
 app.MapGet("/", () => "IoT Data Bridge SignalR Hub is running!");
 
+// Add health check endpoint
+app.MapGet("/health", () => "OK");
+
+Console.WriteLine("🚀 Starting IoT Data Bridge SignalR Hub...");
+Console.WriteLine("📍 Listening on: http://0.0.0.0:5000");
+Console.WriteLine("🔗 Hub endpoint: http://0.0.0.0:5000/hub");
+Console.WriteLine("❤️  Health check: http://0.0.0.0:5000/health");
+
 // Configure to listen on all interfaces (0.0.0.0) instead of just localhost
 app.Run("http://0.0.0.0:5000");
 
