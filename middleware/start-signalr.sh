@@ -114,34 +114,45 @@ echo
 
 # Check if SignalR server is running
 echo "Checking if SignalR server is running..."
-if ! curl -s http://localhost:5000/ > /dev/null 2>&1; then
-    echo "SignalR server is not running. Starting SignalR server..."
-    
-    # Start SignalR server in background
-    cd signalr_hub
-    nohup dotnet run > ../signalr_server.log 2>&1 &
-    SIGNALR_PID=$!
-    cd ..
-    
-    # Wait for server to start
-    echo "Waiting for SignalR server to start..."
-    for i in {1..10}; do
-        if curl -s http://localhost:5000/ > /dev/null 2>&1; then
-            echo "SignalR server started successfully!"
-            break
-        fi
-        echo "Attempt $i/10: Waiting for server..."
-        sleep 2
-    done
-    
-    # Check if server started successfully
-    if ! curl -s http://localhost:5000/ > /dev/null 2>&1; then
-        echo "Error: Failed to start SignalR server"
-        echo "Check signalr_server.log for details"
-        exit 1
+
+# Kill any existing dotnet processes to avoid port conflicts
+echo "Stopping any existing SignalR servers..."
+pkill -f "dotnet.*signalr_hub" 2>/dev/null || true
+pkill -f "dotnet run" 2>/dev/null || true
+
+# Wait a moment for processes to stop
+sleep 2
+
+# Check if port 5000 is still in use
+if netstat -tlnp 2>/dev/null | grep -q ":5000 "; then
+    echo "Port 5000 is still in use. Force killing processes..."
+    sudo lsof -ti:5000 | xargs sudo kill -9 2>/dev/null || true
+    sleep 2
+fi
+
+# Now start SignalR server
+echo "Starting SignalR server..."
+cd signalr_hub
+nohup dotnet run > ../signalr_server.log 2>&1 &
+SIGNALR_PID=$!
+cd ..
+
+# Wait for server to start
+echo "Waiting for SignalR server to start..."
+for i in {1..10}; do
+    if curl -s http://localhost:5000/ > /dev/null 2>&1; then
+        echo "SignalR server started successfully!"
+        break
     fi
-else
-    echo "SignalR server is already running."
+    echo "Attempt $i/10: Waiting for server..."
+    sleep 2
+done
+
+# Check if server started successfully
+if ! curl -s http://localhost:5000/ > /dev/null 2>&1; then
+    echo "Error: Failed to start SignalR server"
+    echo "Check signalr_server.log for details"
+    exit 1
 fi
 
 # Start the middleware
