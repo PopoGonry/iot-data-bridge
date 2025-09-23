@@ -287,6 +287,78 @@ class IoTDataBridge:
             print(f"Hub connection verification failed: {e}")
             return False
     
+    async def _heartbeat_monitor(self):
+        """Monitor system health and send heartbeat messages"""
+        import time
+        start_time = time.time()
+        heartbeat_count = 0
+        
+        while self.is_running:
+            try:
+                heartbeat_count += 1
+                current_time = time.time()
+                uptime = current_time - start_time
+                
+                # Get layer statistics
+                input_stats = getattr(self.input_layer, 'get_stats', lambda: {})()
+                mapping_stats = getattr(self.mapping_layer, 'get_stats', lambda: {})()
+                resolver_stats = getattr(self.resolver_layer, 'get_stats', lambda: {})()
+                transports_stats = getattr(self.transports_layer, 'get_stats', lambda: {})()
+                
+                # Create heartbeat message
+                heartbeat_msg = {
+                    "type": "heartbeat",
+                    "timestamp": current_time,
+                    "uptime": uptime,
+                    "heartbeat_count": heartbeat_count,
+                    "layers": {
+                        "input": {
+                            "processed": input_stats.get('processed', 0),
+                            "errors": input_stats.get('errors', 0),
+                            "is_running": getattr(self.input_layer, 'is_running', False)
+                        },
+                        "mapping": {
+                            "processed": mapping_stats.get('processed', 0),
+                            "errors": mapping_stats.get('errors', 0),
+                            "is_running": getattr(self.mapping_layer, 'is_running', False)
+                        },
+                        "resolver": {
+                            "processed": resolver_stats.get('processed', 0),
+                            "errors": resolver_stats.get('errors', 0),
+                            "is_running": getattr(self.resolver_layer, 'is_running', False)
+                        },
+                        "transports": {
+                            "processed": transports_stats.get('processed', 0),
+                            "errors": transports_stats.get('errors', 0),
+                            "is_running": getattr(self.transports_layer, 'is_running', False)
+                        }
+                    }
+                }
+                
+                # Log heartbeat
+                print(f"💓 HEARTBEAT #{heartbeat_count} - Uptime: {uptime:.1f}s")
+                print(f"   Input: {input_stats.get('processed', 0)} processed, {input_stats.get('errors', 0)} errors")
+                print(f"   Mapping: {mapping_stats.get('processed', 0)} processed, {mapping_stats.get('errors', 0)} errors")
+                print(f"   Resolver: {resolver_stats.get('processed', 0)} processed, {resolver_stats.get('errors', 0)} errors")
+                print(f"   Transports: {transports_stats.get('processed', 0)} processed, {transports_stats.get('errors', 0)} errors")
+                
+                # Check for potential issues
+                if input_stats.get('errors', 0) > 10:
+                    print("⚠️  WARNING: High error count in Input layer")
+                if mapping_stats.get('errors', 0) > 10:
+                    print("⚠️  WARNING: High error count in Mapping layer")
+                if resolver_stats.get('errors', 0) > 10:
+                    print("⚠️  WARNING: High error count in Resolver layer")
+                if transports_stats.get('errors', 0) > 10:
+                    print("⚠️  WARNING: High error count in Transports layer")
+                
+                # Wait for next heartbeat (30 seconds)
+                await asyncio.sleep(30)
+                
+            except Exception as e:
+                print(f"❌ Heartbeat monitor error: {e}")
+                await asyncio.sleep(30)  # Continue monitoring even if there's an error
+    
     def _stop_signalr_hub(self):
         """Stop SignalR hub"""
         import subprocess
@@ -326,6 +398,9 @@ class IoTDataBridge:
             await self.transports_layer.start()
             await self.logging_layer.start()
             
+            # Start heartbeat monitoring
+            heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
+            
             # Keep running with more efficient waiting
             try:
                 while self.is_running:
@@ -333,6 +408,13 @@ class IoTDataBridge:
                     await asyncio.sleep(0.1)
             except asyncio.CancelledError:
                 pass
+            finally:
+                # Cancel heartbeat task
+                heartbeat_task.cancel()
+                try:
+                    await heartbeat_task
+                except asyncio.CancelledError:
+                    pass
                 
         except KeyboardInterrupt:
             pass

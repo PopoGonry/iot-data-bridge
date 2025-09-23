@@ -91,15 +91,27 @@ class SignalRInputHandler:
                 self.logger.error("Error stopping SignalR connection", error=str(e))
         self.logger.info("SignalR connection stopped")
     
+    async def _timeout_callback(self, task, timeout):
+        """Monitor callback task with timeout"""
+        try:
+            await asyncio.wait_for(task, timeout=timeout)
+        except asyncio.TimeoutError:
+            self.logger.warning("Callback task timed out", timeout=timeout)
+            task.cancel()
+        except Exception as e:
+            self.logger.error("Callback task error", error=str(e))
+    
     def _on_message(self, *args):
         """Handle incoming SignalR message"""
         try:
             # SignalR messages come as a list of arguments
             if not args or len(args) < 1:
+                self.logger.debug("Empty SignalR message received")
                 return
             
             # First argument should be the message content
             message = args[0]
+            self.logger.debug("SignalR message received", message_type=type(message).__name__)
             
             # Parse message
             if isinstance(message, str):
@@ -113,32 +125,6 @@ class SignalRInputHandler:
             else:
                 payload = message
             
-            # Handle compressed batch messages
-            if isinstance(payload, dict) and 'batch_id' in payload and 'data' in payload:
-                # Process each item in the batch
-                for item in payload['data']:
-                    trace_id = str(uuid.uuid4())
-                    ingress_event = IngressEvent(
-                        trace_id=trace_id,
-                        raw=item,
-                        meta={
-                            "source": "signalr",
-                            "group": self.config.group,
-                            "target": "ingress",
-                            "batch_id": payload.get('batch_id'),
-                            "batch_count": payload.get('count', 1)
-                        }
-                    )
-                    
-                    # Schedule the callback as a task
-                    import asyncio
-                    try:
-                        loop = asyncio.get_running_loop()
-                        asyncio.create_task(self.callback(ingress_event))
-                    except RuntimeError:
-                        asyncio.run(self.callback(ingress_event))
-                return
-            
             # Create ingress event
             trace_id = str(uuid.uuid4())
             ingress_event = IngressEvent(
@@ -151,13 +137,15 @@ class SignalRInputHandler:
                 }
             )
             
-            # Schedule the callback as a task
+            # Schedule the callback as a task with timeout
             import asyncio
             try:
                 # Try to get the current event loop
                 loop = asyncio.get_running_loop()
-                # Use create_task for better performance
-                asyncio.create_task(self.callback(ingress_event))
+                # Use create_task for better performance with timeout
+                task = asyncio.create_task(self.callback(ingress_event))
+                # Add timeout to prevent hanging
+                asyncio.create_task(self._timeout_callback(task, 10.0))
             except RuntimeError:
                 # If no event loop is running, create a new one
                 asyncio.run(self.callback(ingress_event))

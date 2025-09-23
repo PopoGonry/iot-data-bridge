@@ -85,6 +85,10 @@ class SignalRTransport:
             }
             
             # Send message to device group
+            self.logger.debug("Sending SignalR message", 
+                            device_id=device_target.device_id,
+                            group=group,
+                            target=target)
             self.connection.send("SendMessage", [group, target, json.dumps(payload)])
             
             return True

@@ -62,7 +62,9 @@ class IoTDataBridge:
             await self._initialize_layers()
             
             # Start MQTT broker
-            self._start_mqtt_broker()
+            if not self._start_mqtt_broker():
+                print("Failed to start MQTT broker. Exiting...")
+                sys.exit(1)
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -238,19 +240,23 @@ class IoTDataBridge:
         self._stop_mqtt_broker()
     
     def _start_mqtt_broker(self):
-        """Start MQTT broker"""
+        """Start MQTT broker with proper configuration"""
         import subprocess
         import os
+        import time
+        import socket
         
         try:
-            # Stop any existing mosquitto processes (silently ignore errors)
+            print("Starting MQTT broker...")
+            
+            # Stop any existing mosquitto processes
             try:
-                subprocess.run(["pkill", "mosquitto"], check=False, capture_output=True)
+                subprocess.run(["pkill", "-f", "mosquitto"], check=False, capture_output=True)
+                time.sleep(1)  # Wait for processes to stop
             except:
                 pass
             
             # Get the directory where mosquitto.conf is located
-            # Try multiple possible locations
             possible_paths = [
                 Path(self.config_path).parent / "mosquitto.conf",  # config/mosquitto.conf
                 Path("mosquitto.conf"),  # current directory
@@ -264,25 +270,95 @@ class IoTDataBridge:
                     break
             
             if not mosquitto_conf:
-                print(f"Warning: mosquitto.conf not found. Searched: {[str(p) for p in possible_paths]}")
-                return
+                print(f"Error: mosquitto.conf not found. Searched: {[str(p) for p in possible_paths]}")
+                print("Please ensure mosquitto.conf exists in the middleware directory")
+                return False
+            
+            print(f"Using MQTT config: {mosquitto_conf}")
+            
+            # Create mosquitto data directory if it doesn't exist
+            data_dir = mosquitto_conf.parent / "mosquitto_data"
+            data_dir.mkdir(exist_ok=True)
             
             # Start mosquitto with the config file
-            result = subprocess.run([
+            cmd = [
                 "mosquitto", 
                 "-c", str(mosquitto_conf), 
-                "-d"
-            ], cwd=str(mosquitto_conf.parent), capture_output=True, text=True)
+                "-v"  # verbose mode for debugging
+            ]
+            
+            print(f"Starting mosquitto with command: {' '.join(cmd)}")
+            result = subprocess.run(cmd, cwd=str(mosquitto_conf.parent), 
+                                  capture_output=True, text=True, timeout=10)
             
             if result.returncode == 0:
-                pass  # MQTT broker started successfully
+                print("MQTT broker started successfully")
+                # Wait a moment for broker to initialize
+                time.sleep(2)
+                
+                # Verify broker is listening on correct interface
+                if self._verify_mqtt_broker():
+                    print("MQTT broker verification successful")
+                    return True
+                else:
+                    print("Warning: MQTT broker may not be listening on all interfaces")
+                    return False
             else:
-                print(f"Failed to start MQTT broker: {result.stderr}")
+                print(f"Failed to start MQTT broker:")
+                print(f"STDOUT: {result.stdout}")
+                print(f"STDERR: {result.stderr}")
+                return False
                 
         except FileNotFoundError:
-            print("Warning: mosquitto not found. Please install mosquitto or start MQTT broker manually.")
+            print("Error: mosquitto not found. Please install mosquitto:")
+            print("  Ubuntu/Debian: sudo apt-get install mosquitto mosquitto-clients")
+            print("  CentOS/RHEL: sudo yum install mosquitto")
+            print("  macOS: brew install mosquitto")
+            return False
+        except subprocess.TimeoutExpired:
+            print("Error: MQTT broker startup timed out")
+            return False
         except Exception as e:
             print(f"Error starting MQTT broker: {e}")
+            return False
+    
+    def _verify_mqtt_broker(self):
+        """Verify MQTT broker is listening on all interfaces"""
+        import socket
+        
+        try:
+            # Check if port 1883 is listening on all interfaces (0.0.0.0)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            
+            # Try to connect to localhost
+            result = sock.connect_ex(('127.0.0.1', 1883))
+            sock.close()
+            
+            if result == 0:
+                print("MQTT broker is listening on localhost:1883")
+                
+                # Also check if it's listening on all interfaces
+                # by trying to connect from a different perspective
+                try:
+                    # Get local IP address
+                    import subprocess
+                    result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+                    if result.returncode == 0:
+                        local_ip = result.stdout.strip().split()[0]
+                        print(f"Local IP address: {local_ip}")
+                        print(f"MQTT broker should be accessible at {local_ip}:1883")
+                except:
+                    pass
+                
+                return True
+            else:
+                print("MQTT broker is not responding on localhost:1883")
+                return False
+                
+        except Exception as e:
+            print(f"Error verifying MQTT broker: {e}")
+            return False
     
     def _stop_mqtt_broker(self):
         """Stop MQTT broker"""

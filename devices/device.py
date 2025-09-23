@@ -24,7 +24,7 @@ class IoTDevice:
         self.logger = structlog.get_logger(f"device_{device_id}")
     
     async def start(self):
-        """Start the device"""
+        """Start the device with connection retry logic"""
         # Get MQTT settings
         mqtt_config = self.config.get('mqtt', {})
         host = mqtt_config.get('host', 'localhost')
@@ -32,7 +32,9 @@ class IoTDevice:
         topic = mqtt_config.get('topic', f'devices/{self.device_id.lower()}/ingress')
         qos = mqtt_config.get('qos', 1)
         
-        # Remove verbose logging
+        # Check if MQTT broker is reachable before attempting connection
+        if not await self._check_mqtt_broker_availability(host, port):
+            raise ConnectionError(f"MQTT broker at {host}:{port} is not reachable")
         
         # Create MQTT client
         self.client = Client(
@@ -43,37 +45,80 @@ class IoTDevice:
             keepalive=mqtt_config.get('keepalive', 60)
         )
         
-        try:
-            async with self.client:
-                self.logger.debug("MQTT broker connection successful", host=host, port=port)
-                
-                self.logger.debug("Starting MQTT topic subscription", topic=topic, qos=qos)
-                await self.client.subscribe(topic, qos=qos)
-                self.logger.debug("MQTT topic subscription completed", topic=topic)
-                
-                self.is_running = True
-                
-                # Listen for messages
-                async for message in self.client.messages:
-                    if not self.is_running:
-                        break
+        # Retry connection logic
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                async with self.client:
+                    self.logger.debug("MQTT broker connection successful", 
+                                   host=host, port=port, attempt=attempt+1)
                     
-                    try:
-                        self.logger.debug("Raw MQTT message received", 
-                                       topic=message.topic,
-                                       payload_size=len(message.payload),
-                                       qos=message.qos)
-                        await self._handle_message(message)
-                    except Exception as e:
-                        self.logger.error("Error handling message", error=str(e))
+                    self.logger.debug("Starting MQTT topic subscription", 
+                                   topic=topic, qos=qos)
+                    await self.client.subscribe(topic, qos=qos)
+                    self.logger.debug("MQTT topic subscription completed", topic=topic)
+                    
+                    self.is_running = True
+                    
+                    # Listen for messages
+                    async for message in self.client.messages:
+                        if not self.is_running:
+                            break
                         
+                        try:
+                            self.logger.debug("Raw MQTT message received", 
+                                           topic=message.topic,
+                                           payload_size=len(message.payload),
+                                           qos=message.qos)
+                            await self._handle_message(message)
+                        except Exception as e:
+                            self.logger.error("Error handling message", error=str(e))
+                    
+                    # If we exit the message loop, break out of retry loop
+                    break
+                        
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    self.logger.warning("Connection attempt failed, retrying...", 
+                                      error=str(e), 
+                                      attempt=attempt+1, 
+                                      max_retries=max_retries,
+                                      retry_delay=retry_delay)
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    self.logger.error("Device connection failed after all retries", 
+                                    error=str(e), 
+                                    error_type=type(e).__name__,
+                                    host=host, 
+                                    port=port,
+                                    attempts=max_retries)
+                    raise
+    
+    async def _check_mqtt_broker_availability(self, host: str, port: int) -> bool:
+        """Check if MQTT broker is reachable"""
+        try:
+            # Create a socket connection to check if the port is open
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(3)  # 3 second timeout
+            
+            result = sock.connect_ex((host, port))
+            sock.close()
+            
+            if result == 0:
+                self.logger.debug("MQTT broker is reachable", host=host, port=port)
+                return True
+            else:
+                self.logger.warning("MQTT broker is not reachable", 
+                                  host=host, port=port, error_code=result)
+                return False
+                
         except Exception as e:
-            self.logger.error("Device connection failed", 
-                            error=str(e), 
-                            error_type=type(e).__name__,
-                            host=host, 
-                            port=port)
-            raise
+            self.logger.warning("Error checking MQTT broker availability", 
+                             host=host, port=port, error=str(e))
+            return False
     
     async def stop(self):
         """Stop the device"""
