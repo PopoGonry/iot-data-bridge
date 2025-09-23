@@ -133,7 +133,8 @@ echo
 echo "Starting IoT Data Bridge Middleware (SignalR)..."
 echo
 
-# Start the middleware
+# Start the middleware (disable auto SignalR Hub start)
+export DISABLE_AUTO_SIGNALR_HUB=true
 python3 src/main_signalr.py
 
 # Clean up SignalR Hub when middleware stops

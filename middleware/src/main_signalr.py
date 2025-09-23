@@ -5,6 +5,7 @@ IoT Data Bridge - SignalR Main Entry Point (Optimized)
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 import subprocess
@@ -94,8 +95,9 @@ class IoTDataBridge:
             # Initialize layers
             await self._initialize_layers()
             
-            # Start SignalR hub
-            self._start_signalr_hub()
+            # Start SignalR hub only if not disabled
+            if not os.environ.get('DISABLE_AUTO_SIGNALR_HUB'):
+                self._start_signalr_hub()
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
