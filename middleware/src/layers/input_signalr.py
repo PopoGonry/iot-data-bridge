@@ -114,8 +114,8 @@ class SignalRInputHandler:
         self.logger.debug("Building SignalR connection", url=self.config.url)
         self.connection = HubConnectionBuilder().with_url(self.config.url).build()
 
-        # 메시지 핸들러 - 서버에서 보내는 이벤트 이름과 맞춤
-        self.connection.on("ingress", self._on_message)
+        # 메시지 핸들러 - reference 코드와 동일하게 수정
+        self.connection.on("ReceiveMessage", self._on_message)
 
         # 연결 오픈 시: 그룹 조인(백오프 재시도)
         def _on_open():
@@ -240,42 +240,17 @@ class SignalRInputHandler:
     # -------------------------
     # SignalR 이벤트 콜백
     # -------------------------
-    def _on_message(self, *args):
-        """Handle incoming SignalR message (signalrcore 내부 쓰레드에서 호출됨)"""
+    def _on_message(self, message):
+        """Handle incoming SignalR message - reference 코드와 동일하게 수정"""
         self.last_message_time = time.time()
-        message = None
         try:
-            self.logger.debug("SignalR message received", args_count=len(args), args=args)
-            if not args:
-                self.logger.warning("Empty SignalR message")
-                return
-
-            first = args[0]
-            self.logger.debug("Processing message", first_arg=first, first_type=type(first))
+            self.logger.debug("SignalR message received", message=message)
             
-            # SignalR 메시지 형태 처리: {"type":1,"target":"ingress","arguments":[...]}
-            if isinstance(first, dict) and "arguments" in first:
-                # SignalR 표준 메시지 형태
-                arguments = first.get("arguments", [])
-                if arguments and len(arguments) > 0:
-                    payload = arguments[0]  # 첫 번째 argument를 payload로 사용
-                    message = str(first)
-                    self.logger.debug("Processed SignalR message", payload=payload)
-                else:
-                    self.logger.warning("Empty arguments in SignalR message")
-                    return
-            elif isinstance(first, str):
-                # JSON 문자열 형태
-                payload = json.loads(first)
-                message = first
-            elif isinstance(first, list) and first and isinstance(first[0], str):
-                # 리스트의 첫 번째 요소가 JSON 문자열
-                payload = json.loads(first[0])
-                message = first[0]
+            # Parse message - reference 코드와 동일한 로직
+            if isinstance(message, str):
+                payload = json.loads(message)
             else:
-                # 기타 형태
-                payload = first
-                message = repr(first)
+                payload = message
 
             trace_id = str(uuid.uuid4())
             ingress_event = IngressEvent(

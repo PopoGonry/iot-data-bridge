@@ -24,8 +24,7 @@ app.MapHub<IoTHub>("/hub");
 
 app.MapGet("/", () => "IoT Data Bridge SignalR Hub is running!");
 
-// Configure to listen on all interfaces (0.0.0.0) instead of just localhost
-app.Run("http://0.0.0.0:5000");
+app.Run();
 
 public class IoTHub : Hub
 {
@@ -41,16 +40,16 @@ public class IoTHub : Hub
         Console.WriteLine($"Client {Context.ConnectionId} left group {groupName}");
     }
 
-    public async Task SendMessage(string groupName, string target, string message)
+    public async Task SendToGroup(string groupName, string target, object data)
     {
-        await Clients.Group(groupName).SendAsync(target, message);
-        Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
+        await Clients.Group(groupName).SendAsync(target, data);
+        Console.WriteLine($"Sent to group {groupName}, target {target}: {data}");
     }
 
-    public async Task SendToGroup(string groupName, string target, string message)
+    public async Task SendMessage(string message)
     {
-        await Clients.Group(groupName).SendAsync("ReceiveMessage", message);
-        Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
+        await Clients.All.SendAsync("ReceiveMessage", message);
+        Console.WriteLine($"Broadcast message: {message}");
     }
 
     public async Task SendBatchMessages(string groupName, string target, string batchMessagesJson)
@@ -76,13 +75,13 @@ public class IoTHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        Console.WriteLine($"Client connected: {Context.ConnectionId} from {Context.GetHttpContext()?.Connection.RemoteIpAddress}");
+        Console.WriteLine($"Client connected: {Context.ConnectionId}");
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        Console.WriteLine($"Client disconnected: {Context.ConnectionId}, Exception: {exception?.Message}");
+        Console.WriteLine($"Client disconnected: {Context.ConnectionId}");
         await base.OnDisconnectedAsync(exception);
     }
 }

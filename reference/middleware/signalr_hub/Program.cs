@@ -47,10 +47,10 @@ public class IoTHub : Hub
         Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
     }
 
-    public async Task SendToGroup(string groupName, string target, string message)
+    public async Task SendToGroup(string groupName, string target, object data)
     {
-        await Clients.Group(groupName).SendAsync("ReceiveMessage", message);
-        Console.WriteLine($"Sent to group {groupName}, target {target}: {message}");
+        await Clients.Group(groupName).SendAsync(target, data);
+        Console.WriteLine($"Sent to group {groupName}, target {target}: {data}");
     }
 
     public async Task SendBatchMessages(string groupName, string target, string batchMessagesJson)

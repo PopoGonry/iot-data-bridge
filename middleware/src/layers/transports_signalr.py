@@ -173,8 +173,8 @@ class SignalRTransport:
                 if not self.connection:
                     # Lazy-start safeguard if connection was dropped
                     await self._restart_connection()
-                # SignalR hub method: [group, target, payload_object]
-                self.connection.send(self._hub_method_send, [group, target, payload])
+                # SignalR hub method: reference 코드와 동일하게 수정
+                self.connection.send("SendToGroup", [group, target, json.dumps(payload)])
                 return True
             except Exception as e:
                 self.logger.error("SignalR send error", group=group, target=target, error=str(e))

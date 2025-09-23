@@ -1,0 +1,23 @@
+# Device Object Catalog - Maps objects to devices
+objects:
+  Geo.Latitude:
+    - VM-A
+    
+  Geo.Longitude:
+    - VM-A
+    
+  Geo.Altitude:
+    - VM-A
+    - VM-B
+    
+  Engine1.SpeedRpm:
+    - VM-B
+    
+  Engine1.Temperature:
+    - VM-B
+    
+  Environment.Humidity:
+    - VM-B
+    
+  Environment.Temperature:
+    - VM-B

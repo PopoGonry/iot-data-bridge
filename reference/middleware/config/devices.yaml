@@ -1,0 +1,285 @@
+# Device Object Catalog - Maps objects to devices
+# Based on marine equipment data specifications
+
+
+# object -> device 매핑 목록
+
+objects:
+  # GPS Navigation Data - VM-A and VM-C receive all GPS data
+  GPS.Latitude:
+    - VM-A
+    - VM-C
+    
+  GPS.Longitude:
+    - VM-A
+    - VM-C
+    
+  GPS.CourseOverGround:
+    - VM-A
+    - VM-C
+    
+  GPS.SpeedOverGround:
+    - VM-A
+    - VM-C
+
+  # Speed Log Data - VM-A and VM-C receive speed through water
+  SpeedLog.SpeedThroughWater:
+    - VM-A
+    - VM-C
+
+  # Wind Data - VM-A and VM-C receive all wind information
+  Wind.Angle:
+    - VM-A
+    - VM-C
+    
+  Wind.Reference:
+    - VM-A
+    - VM-C
+    
+  Wind.Speed:
+    - VM-A
+    - VM-C
+    
+  Wind.SpeedUnit:
+    - VM-A
+    - VM-C
+
+  # Echo Sounder Data - VM-A and VM-C receive depth and water temperature
+  EchoSounder.WaterDepth:
+    - VM-A
+    - VM-C
+    
+  EchoSounder.WaterTemperature:
+    - VM-A
+    - VM-C
+
+  # Engine 1 Data - VM-B and VM-C receive all Engine 1 data
+  Engine1.DataSource:
+    - VM-B
+    - VM-C
+    
+  Engine1.ShaftNumber:
+    - VM-B
+    - VM-C
+    
+  Engine1.Speed:
+    - VM-B
+    - VM-C
+    
+  Engine1.PropellerPitch:
+    - VM-B
+    - VM-C
+    
+  Engine1.Status:
+    - VM-B
+    - VM-C
+
+  # Engine 2 Data - VM-B and VM-C receive all Engine 2 data
+  Engine2.DataSource:
+    - VM-B
+    - VM-C
+    
+  Engine2.ShaftNumber:
+    - VM-B
+    - VM-C
+    
+  Engine2.Speed:
+    - VM-B
+    - VM-C
+    
+  Engine2.PropellerPitch:
+    - VM-B
+    - VM-C
+    
+  Engine2.Status:
+    - VM-B
+    - VM-C
+
+  # Rudder Data - VM-A and VM-C receive rudder information
+  Rudder.StarboardAngle:
+    - VM-A
+    - VM-C
+    
+  Rudder.StarboardStatus:
+    - VM-A
+    - VM-C
+    
+  Rudder.PortAngle:
+    - VM-A
+    - VM-C
+    
+  Rudder.PortStatus:
+    - VM-A
+    - VM-C
+
+  # VDR Data - VM-A and VM-C receive current set and drift
+  VDR.CurrentSet:
+    - VM-A
+    - VM-C
+    
+  VDR.CurrentDrift:
+    - VM-A
+    - VM-C
+
+  # Inclinometer Data - VM-A and VM-C receive roll and pitch
+  Inclinometer.Roll:
+    - VM-A
+    - VM-C
+    
+  Inclinometer.Pitch:
+    - VM-A
+    - VM-C
+
+  # Gyrocompass Data - VM-A and VM-C receive heading information
+  Gyrocompass.MagneticHeading:
+    - VM-A
+    - VM-C
+    
+  Gyrocompass.TrueHeading:
+    - VM-A
+    - VM-C
+
+  # Diesel Engine 1 Cylinder Exhaust Gas Temperatures - VM-B and VM-C receive all
+  DieselEngine1.Cylinder1.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder2.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder3.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder4.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder5.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder6.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder7.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder8.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder9.ExhaustGasTemperature:
+    - VM-B
+    - VM-C
+
+  # Diesel Engine 1 Cylinder Maximum Pressures - VM-B and VM-C receive all
+  DieselEngine1.Cylinder1.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder2.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder3.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder4.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder5.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder6.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder7.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder8.MaximumPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Cylinder9.MaximumPressure:
+    - VM-B
+    - VM-C
+
+  # Diesel Engine 1 System Data - VM-B and VM-C receive all system parameters
+  DieselEngine1.FuelGasMassFlow:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.FuelOilInletPressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.FuelOilInletTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.ExhaustGasInletTemperatureAlarm:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.ExhaustGasOutletTemperatureAlarm:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.LubricatingOilInletTemperature:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Load:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.Power:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.RPM:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.ScavengePressure:
+    - VM-B
+    - VM-C
+    
+  DieselEngine1.ScavengeTemperature:
+    - VM-B
+    - VM-C
+
+  # Diesel Generator Running Hours - VM-B and VM-C receive both generators
+  DieselGenerator1.RunningHours:
+    - VM-B
+    - VM-C
+    
+  DieselGenerator2.RunningHours:
+    - VM-B
+    - VM-C
+
+  # Gas Engine 1 Data - VM-B and VM-C receive all gas engine data
+  GasEngine1.ExhaustGasInletTemperature:
+    - VM-B
+    - VM-C
+    
+  GasEngine1.ExhaustGasOutletTemperature:
+    - VM-B
+    - VM-C
+    
+  GasEngine1.LubricatingOilInletPressure:
+    - VM-B
+    - VM-C
+    
+  GasEngine1.RPM:
+    - VM-B
+    - VM-C
