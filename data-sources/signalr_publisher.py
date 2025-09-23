@@ -97,7 +97,7 @@ async def publish_test_data(hub_url, group_name):
             if running and batch_messages:
                 try:
                     # SignalR로 모든 메시지를 한번에 전송 (배치 전송)
-                    connection.send("SendBatchMessages", [group_name, "ingress", json.dumps(batch_messages)])
+                    connection.send("SendBatchMessages", [group_name, "ReceiveMessage", json.dumps(batch_messages)])
                     
                     # 전송 완료 후 잠시 대기 (연결 안정화)
                     await asyncio.sleep(0.1)
@@ -107,7 +107,7 @@ async def publish_test_data(hub_url, group_name):
                     # 배치 전송 실패 시 개별 메시지로 전송
                     for i, message_data in enumerate(batch_messages, 1):
                         try:
-                            connection.send("SendMessage", [group_name, "ingress", json.dumps(message_data)])
+                            connection.send("SendMessage", [group_name, "ReceiveMessage", json.dumps(message_data)])
                         except Exception as e2:
                             print(f"Error sending individual message {i}: {e2}")
                             break
