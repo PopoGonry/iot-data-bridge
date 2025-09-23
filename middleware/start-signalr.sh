@@ -109,11 +109,36 @@ else
 fi
 
 echo
+echo "Starting SignalR Hub first..."
+echo
+
+# Start SignalR Hub in background
+cd signalr_hub
+dotnet run &
+SIGNALR_PID=$!
+cd ..
+
+# Wait for SignalR Hub to start
+echo "Waiting for SignalR Hub to start..."
+sleep 5
+
+# Check if SignalR Hub is running
+if ! kill -0 $SIGNALR_PID 2>/dev/null; then
+    echo "Error: SignalR Hub failed to start"
+    exit 1
+fi
+
+echo "SignalR Hub started successfully (PID: $SIGNALR_PID)"
+echo
 echo "Starting IoT Data Bridge Middleware (SignalR)..."
 echo
 
 # Start the middleware
 python3 src/main_signalr.py
+
+# Clean up SignalR Hub when middleware stops
+echo "Stopping SignalR Hub..."
+kill $SIGNALR_PID 2>/dev/null || true
 
 echo
 echo "Middleware stopped."

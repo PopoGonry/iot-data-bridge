@@ -260,9 +260,10 @@ class IoTDataBridge:
             self.logger.warning("Failed to pre-warm connections", error=str(e))
     
     def _start_signalr_hub(self):
-        """Start SignalR hub"""
+        """Start SignalR hub with better error handling"""
         import subprocess
         import os
+        import time
         
         try:
             # Stop any existing dotnet processes (silently ignore errors)
@@ -288,26 +289,38 @@ class IoTDataBridge:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
                 return
             
+            print(f"Starting SignalR Hub from: {signalr_hub_dir}")
+            
+            # Check if dotnet is available
+            try:
+                subprocess.run(["dotnet", "--version"], check=True, capture_output=True)
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                print("Error: dotnet not found. Please install .NET SDK")
+                return
+            
             # Start SignalR hub in background
             result = subprocess.Popen([
                 "dotnet", "run"
             ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
-            # Give it a moment to start
-            import time
-            time.sleep(2)
+            # Give it more time to start
+            time.sleep(3)
             
             # Check if process is still running
             if result.poll() is None:
-                pass  # SignalR hub started successfully
+                print("SignalR Hub started successfully")
             else:
                 stdout, stderr = result.communicate()
-                print(f"Failed to start SignalR hub: {stderr.decode()}")
+                print(f"Failed to start SignalR hub:")
+                print(f"STDOUT: {stdout.decode()}")
+                print(f"STDERR: {stderr.decode()}")
                 
         except FileNotFoundError:
             print("Warning: dotnet not found. Please install .NET SDK or start SignalR hub manually.")
         except Exception as e:
             print(f"Error starting SignalR hub: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _stop_signalr_hub(self):
         """Stop SignalR hub"""

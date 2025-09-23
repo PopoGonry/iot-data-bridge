@@ -120,6 +120,9 @@ class SignalRInputHandler:
             raise ImportError("SignalR library not available")
             
         try:
+            print(f"Connecting to SignalR Hub at: {self.config.url}")
+            print(f"Joining group: {self.config.group}")
+            
             # Get connection from pool
             self.connection = await self.connection_pool.get_connection()
             
@@ -130,9 +133,13 @@ class SignalRInputHandler:
             self._batch_task = asyncio.create_task(self._process_batch_messages())
             
             self.is_running = True
+            print("SignalR input handler started successfully")
             self.logger.info("SignalR input handler started with connection pooling")
             
         except Exception as e:
+            print(f"SignalR connection error: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
             self.logger.error("SignalR connection error", error=str(e))
             raise
     
