@@ -52,7 +52,7 @@ class SignalRDataPublisher:
             # Register connection event handlers
             self.connection.on_open(lambda: self.logger.info("SignalR connection opened"))
             self.connection.on_close(lambda: self.logger.info("SignalR connection closed"))
-            self.connection.on_error(lambda data: self.logger.error("SignalR connection error", error=data))
+            self.connection.on_error(lambda data: self.logger.error("SignalR connection error", error=str(data)))
             
             # Start connection
             self.connection.start()
@@ -70,7 +70,9 @@ class SignalRDataPublisher:
             self.logger.info("SignalR data publisher started", hub_url=self.hub_url, group=self.group)
             
         except Exception as e:
+            import traceback
             self.logger.error("Failed to start SignalR publisher", error=str(e))
+            self.logger.error("SignalR publisher traceback", traceback=traceback.format_exc())
             raise
     
     async def stop(self):
@@ -228,7 +230,9 @@ async def main():
     except KeyboardInterrupt:
         print("\n🛑 Stopping SignalR Data Publisher...")
     except Exception as e:
+        import traceback
         print(f"❌ Error: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
     finally:
         await publisher.stop()
 
