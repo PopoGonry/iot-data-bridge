@@ -21,7 +21,7 @@ except ImportError as e:
 
 from layers.base import TransportsLayerInterface
 from models.events import ResolvedEvent
-from models.config import TransportConfig
+from models.config import TransportsConfig
 
 
 class SignalRTransportHandler:
@@ -34,6 +34,9 @@ class SignalRTransportHandler:
         self.connections: Dict[str, BaseHubConnection] = {}
         self._connection_lock = asyncio.Lock()
         self.is_running = False
+        
+        if not self.config.signalr:
+            raise ValueError("SignalR configuration is required")
         
     async def start(self):
         """Start SignalR transport handler"""
@@ -242,7 +245,7 @@ class SignalRTransportHandler:
 class TransportLayer(TransportsLayerInterface):
     """Transport Layer - SignalR only"""
     
-    def __init__(self, config: TransportConfig, device_catalog):
+    def __init__(self, config: TransportsConfig, device_catalog):
         super().__init__("transport_layer")
         self.config = config
         self.device_catalog = device_catalog
@@ -251,7 +254,7 @@ class TransportLayer(TransportsLayerInterface):
         
         if not self.config.signalr:
             raise ValueError("SignalR configuration is required")
-        self.handler = SignalRTransportHandler(self.config.signalr, device_catalog)
+        self.handler = SignalRTransportHandler(self.config, device_catalog)
     
     async def start(self):
         self._task = asyncio.create_task(self.handler.start())
