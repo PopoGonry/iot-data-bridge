@@ -260,6 +260,7 @@ class SignalRInputHandler:
                 if arguments and len(arguments) > 0:
                     payload = arguments[0]  # 첫 번째 argument를 payload로 사용
                     message = str(first)
+                    self.logger.debug("Processed SignalR message", payload=payload)
                 else:
                     self.logger.warning("Empty arguments in SignalR message")
                     return
@@ -311,6 +312,10 @@ class SignalRInputHandler:
                 message=message,
                 traceback=traceback.format_exc(),
             )
+            # 디버깅을 위해 더 자세한 정보 출력
+            self.logger.debug("Full args received", args=args)
+            self.logger.debug("First arg type", first_type=type(first) if 'first' in locals() else "undefined")
+            self.logger.debug("First arg content", first_content=first if 'first' in locals() else "undefined")
 
     def _on_connection_close(self, *args, **kwargs):
         """Handle connection close - schedule reconnection on main loop"""
