@@ -1,12 +1,14 @@
 """
-Input Layer - SignalR External data reception
+Input Layer - SignalR External data reception (Optimized)
 """
 
 import asyncio
 import json
 import uuid
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Dict, List
 import structlog
+from collections import deque
+import weakref
 
 try:
     from signalrcore.hub_connection_builder import HubConnectionBuilder
@@ -23,130 +25,221 @@ from models.events import IngressEvent
 from models.config import InputConfig
 
 
+class SignalRConnectionPool:
+    """SignalR connection pool for better performance"""
+    
+    def __init__(self, config, max_connections: int = 5):
+        self.config = config
+        self.max_connections = max_connections
+        self.connections: deque = deque()
+        self.active_connections = 0
+        self.logger = structlog.get_logger("signalr_pool")
+        
+    async def get_connection(self) -> BaseHubConnection:
+        """Get a connection from pool or create new one"""
+        if self.connections:
+            return self.connections.popleft()
+        
+        if self.active_connections < self.max_connections:
+            connection = await self._create_connection()
+            self.active_connections += 1
+            return connection
+        
+        # Wait for available connection
+        while not self.connections:
+            await asyncio.sleep(0.01)
+        return self.connections.popleft()
+    
+    async def return_connection(self, connection: BaseHubConnection):
+        """Return connection to pool"""
+        if connection and self._is_connection_healthy(connection):
+            self.connections.append(connection)
+        else:
+            self.active_connections -= 1
+    
+    async def _create_connection(self) -> BaseHubConnection:
+        """Create new SignalR connection"""
+        connection = HubConnectionBuilder() \
+            .with_url(self.config.url) \
+            .build()
+        
+        # Optimized connection setup
+        connection.on_open(lambda: self.logger.debug("SignalR connection opened"))
+        connection.on_close(lambda: self.logger.debug("SignalR connection closed"))
+        connection.on_error(lambda data: self.logger.error("SignalR connection error", error=data))
+        
+        connection.start()
+        
+        # Non-blocking wait for connection
+        await asyncio.sleep(0.5)
+        
+        # Join group
+        connection.send("JoinGroup", [self.config.group])
+        
+        return connection
+    
+    def _is_connection_healthy(self, connection: BaseHubConnection) -> bool:
+        """Check if connection is still healthy"""
+        try:
+            if hasattr(connection, 'transport') and hasattr(connection.transport, '_ws'):
+                return connection.transport._ws and connection.transport._ws.sock
+            return False
+        except:
+            return False
+    
+    async def close_all(self):
+        """Close all connections in pool"""
+        for connection in self.connections:
+            try:
+                connection.send("LeaveGroup", [self.config.group])
+                connection.stop()
+            except:
+                pass
+        self.connections.clear()
+        self.active_connections = 0
+
+
 class SignalRInputHandler:
-    """SignalR input handler"""
+    """Optimized SignalR input handler with connection pooling and batch processing"""
     
     def __init__(self, config, callback: Callable[[IngressEvent], None]):
         self.config = config
         self.callback = callback
         self.logger = structlog.get_logger("signalr_input")
-        self.connection: Optional[BaseHubConnection] = None
+        self.connection_pool = SignalRConnectionPool(config, max_connections=3)
         self.is_running = False
-    
+        self.message_queue = deque(maxlen=1000)  # Message queue for batch processing
+        self.batch_size = 10
+        self.batch_timeout = 0.1  # 100ms batch timeout
+        self._batch_task = None
+        
     async def start(self):
-        """Start SignalR connection"""
+        """Start SignalR connection with optimized setup"""
         if not SIGNALR_AVAILABLE:
             self.logger.error("SignalR is not available. Please install signalrcore library.")
             raise ImportError("SignalR library not available")
             
         try:
-            # Build connection
-            self.connection = HubConnectionBuilder() \
-                .with_url(self.config.url) \
-                .build()
+            # Get connection from pool
+            self.connection = await self.connection_pool.get_connection()
             
-            # Register message handler for ingress messages
+            # Register optimized message handler
             self.connection.on("ingress", self._on_message)
             
-            # Register connection event handlers
-            self.connection.on_open(lambda: None)
-            self.connection.on_close(lambda: None)
-            self.connection.on_error(lambda data: None)
-            
-            # Wait a moment for SignalR hub to be fully ready
-            import time
-            time.sleep(3)
-            
-            # Start connection
-            self.connection.start()
-            
-            # Wait for connection to stabilize
-            time.sleep(2)
-            
-            # Check if connection is still active
-            if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
-                if self.connection.transport._ws and self.connection.transport._ws.sock:
-                    pass  # Connection is active
-                else:
-                    raise ConnectionError("SignalR connection is not active")
-            
-            # Join group
-            self.connection.send("JoinGroup", [self.config.group])
+            # Start batch processing task
+            self._batch_task = asyncio.create_task(self._process_batch_messages())
             
             self.is_running = True
+            self.logger.info("SignalR input handler started with connection pooling")
             
         except Exception as e:
-            import traceback
-            print(f"SignalR connection error: {e}")
-            print(f"Traceback: {traceback.format_exc()}")
             self.logger.error("SignalR connection error", error=str(e))
-            self.logger.error("SignalR connection traceback", traceback=traceback.format_exc())
             raise
     
     async def stop(self):
-        """Stop SignalR connection"""
+        """Stop SignalR connection and cleanup"""
         self.is_running = False
-        if self.connection:
+        
+        # Cancel batch processing
+        if self._batch_task:
+            self._batch_task.cancel()
             try:
-                # Leave group
-                self.connection.send("LeaveGroup", [self.config.group])
-                self.connection.stop()
-            except Exception as e:
-                self.logger.error("Error stopping SignalR connection", error=str(e))
-        self.logger.info("SignalR connection stopped")
+                await self._batch_task
+            except asyncio.CancelledError:
+                pass
+        
+        # Return connection to pool
+        if hasattr(self, 'connection'):
+            await self.connection_pool.return_connection(self.connection)
+        
+        # Close all connections
+        await self.connection_pool.close_all()
+        
+        self.logger.info("SignalR input handler stopped")
     
     def _on_message(self, *args):
-        """Handle incoming SignalR message"""
+        """Handle incoming SignalR message - optimized for batch processing"""
         try:
-            # SignalR messages come as a list of arguments
             if not args or len(args) < 1:
                 return
             
-            # First argument should be the message content
             message = args[0]
             
-            # Parse message
+            # Parse message efficiently
             if isinstance(message, str):
-                payload = json.loads(message)
+                try:
+                    payload = json.loads(message)
+                except json.JSONDecodeError:
+                    return
             elif isinstance(message, list) and len(message) > 0:
-                # If message is a list, take the first element
                 if isinstance(message[0], str):
-                    payload = json.loads(message[0])
+                    try:
+                        payload = json.loads(message[0])
+                    except json.JSONDecodeError:
+                        return
                 else:
                     payload = message[0]
             else:
                 payload = message
             
-            # Create ingress event
-            trace_id = str(uuid.uuid4())
-            ingress_event = IngressEvent(
-                trace_id=trace_id,
-                raw=payload,
-                meta={
-                    "source": "signalr",
-                    "group": self.config.group,
-                    "target": "ingress"
-                }
-            )
+            # Add to message queue for batch processing
+            self.message_queue.append(payload)
             
-            # Schedule the callback as a task
-            import asyncio
-            try:
-                # Try to get the current event loop
-                loop = asyncio.get_running_loop()
-                loop.create_task(self.callback(ingress_event))
-            except RuntimeError:
-                # If no event loop is running, create a new one
-                asyncio.run(self.callback(ingress_event))
-            
-        except json.JSONDecodeError as e:
-            self.logger.error("Invalid JSON in SignalR message", error=str(e), message=message)
         except Exception as e:
-            import traceback
-            print(f"Error processing SignalR message: {e}")
-            print(f"Message: {message}")
-            print(f"Traceback: {traceback.format_exc()}")
-            self.logger.error("Error processing SignalR message", error=str(e), message=message, traceback=traceback.format_exc())
+            self.logger.error("Error processing SignalR message", error=str(e))
+    
+    async def _process_batch_messages(self):
+        """Process messages in batches for better performance"""
+        while self.is_running:
+            try:
+                if not self.message_queue:
+                    await asyncio.sleep(self.batch_timeout)
+                    continue
+                
+                # Collect batch of messages
+                batch = []
+                for _ in range(min(self.batch_size, len(self.message_queue))):
+                    if self.message_queue:
+                        batch.append(self.message_queue.popleft())
+                
+                if batch:
+                    # Process batch asynchronously
+                    await self._process_message_batch(batch)
+                
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self.logger.error("Error in batch processing", error=str(e))
+                await asyncio.sleep(0.1)
+    
+    async def _process_message_batch(self, batch: List[Dict]):
+        """Process a batch of messages efficiently"""
+        tasks = []
+        
+        for payload in batch:
+            try:
+                # Create ingress event
+                trace_id = str(uuid.uuid4())
+                ingress_event = IngressEvent(
+                    trace_id=trace_id,
+                    raw=payload,
+                    meta={
+                        "source": "signalr",
+                        "group": self.config.group,
+                        "target": "ingress"
+                    }
+                )
+                
+                # Create task for callback
+                task = asyncio.create_task(self.callback(ingress_event))
+                tasks.append(task)
+                
+            except Exception as e:
+                self.logger.error("Error creating ingress event", error=str(e))
+        
+        # Wait for all tasks to complete
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class InputLayer(InputLayerInterface):

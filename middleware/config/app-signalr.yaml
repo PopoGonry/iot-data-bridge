@@ -1,30 +1,76 @@
-# IoT Data Bridge Main Configuration - SignalR Only
+# IoT Data Bridge Main Configuration - SignalR Only (Optimized)
 
 app_name: "IoT Data Bridge (SignalR)"
 mapping_catalog_path: "config/mappings.yaml"
 device_catalog_path: "config/devices.yaml"
 
-# Input Layer Configuration - SignalR Only
+# Performance Settings
+performance:
+  max_connections: 10
+  batch_size: 20
+  batch_timeout: 0.05  # 50ms
+  connection_pool_size: 5
+  message_queue_size: 1000
+  enable_compression: true
+  enable_caching: true
+
+# Input Layer Configuration - SignalR Only (Optimized)
 input:
   type: "signalr"
   signalr:
-    url: "http://localhost:5000/hub"  # localhost로 연결
+    url: "http://localhost:5000/hub"
     group: "iot_clients"
     username: null
     password: null
+    # Performance optimizations
+    connection_timeout: 30
+    keepalive_interval: 15
+    max_retry_attempts: 3
+    retry_delay: 1.0
+    enable_heartbeat: true
+    heartbeat_interval: 30
 
-# Transports Layer Configuration - SignalR Only
+# Transports Layer Configuration - SignalR Only (Optimized)
 transports:
   type: "signalr"
   signalr:
-    url: "http://localhost:5000/hub"  # localhost로 연결
+    url: "http://localhost:5000/hub"
     group: "iot_devices"
     username: null
     password: null
+    # Performance optimizations
+    connection_timeout: 30
+    keepalive_interval: 15
+    max_retry_attempts: 3
+    retry_delay: 1.0
+    enable_heartbeat: true
+    heartbeat_interval: 30
+    # Batching settings
+    batch_size: 20
+    batch_timeout: 0.05
+    max_batch_size: 100
 
-# Logging Configuration
+# Logging Configuration (Optimized)
 logging:
   level: "INFO"
   file: "logs/iot_data_bridge_signalr.log"
   max_size: 10485760  # 10MB
   backup_count: 5
+  # Performance optimizations
+  enable_async_logging: true
+  log_batch_size: 100
+  log_flush_interval: 1.0  # seconds
+  enable_structured_logging: true
+  log_level_override:
+    signalr_input: "WARNING"
+    signalr_transport: "WARNING"
+    signalr_pool: "WARNING"
+
+# Monitoring Configuration
+monitoring:
+  enable_metrics: true
+  metrics_interval: 60  # seconds
+  enable_health_checks: true
+  health_check_interval: 30  # seconds
+  enable_performance_counters: true
+  counter_interval: 10  # seconds

@@ -164,39 +164,64 @@ class IoTDataBridge:
         await self.device_catalog.load()
     
     async def _initialize_layers(self):
-        """Initialize all layers"""
-        # Initialize input layer
+        """Initialize all layers with performance optimizations"""
+        # Initialize logging layer first for better performance monitoring
+        self.logging_layer = LoggingLayer(self.config.logging)
+        
+        # Initialize input layer with optimized settings
         self.input_layer = InputLayer(
             self.config.input,
             self._handle_ingress_event
         )
         
-        # Initialize mapping layer
+        # Initialize mapping layer with caching
         self.mapping_layer = MappingLayer(
             self.mapping_catalog,
             self._handle_mapped_event
         )
         
-        # Initialize resolver layer
+        # Initialize resolver layer with optimized device lookup
         self.resolver_layer = ResolverLayer(
             self.device_catalog,
             self._handle_resolved_event
         )
         
-        # Initialize transports layer
+        # Initialize transports layer with connection pooling
         self.transports_layer = TransportsLayer(
             self.config.transports,
             self.device_catalog,
             self._handle_device_ingest
         )
         
-        # Initialize logging layer
-        self.logging_layer = LoggingLayer(
-            self.config.logging
-        )
-        
-        # Set up layer callbacks
+        # Set up optimized layer callbacks
         self.resolver_layer.set_transports_callback(self._handle_resolved_event)
+        
+        # Pre-warm connections for better performance
+        await self._pre_warm_connections()
+    
+    async def _pre_warm_connections(self):
+        """Pre-warm connections for better performance"""
+        try:
+            # Pre-warm input layer connection
+            if hasattr(self.input_layer, 'handler') and hasattr(self.input_layer.handler, 'connection_pool'):
+                # Pre-create connections in the pool
+                for _ in range(min(2, self.input_layer.handler.connection_pool.max_connections)):
+                    connection = await self.input_layer.handler.connection_pool._create_connection()
+                    self.input_layer.handler.connection_pool.connections.append(connection)
+                    self.input_layer.handler.connection_pool.active_connections += 1
+            
+            # Pre-warm transports layer connection
+            if hasattr(self.transports_layer, 'transport') and hasattr(self.transports_layer.transport, 'connection_pool'):
+                # Pre-create connections in the pool
+                for _ in range(min(2, self.transports_layer.transport.connection_pool.max_connections)):
+                    connection = await self.transports_layer.transport.connection_pool._create_connection()
+                    self.transports_layer.transport.connection_pool.connections.append(connection)
+                    self.transports_layer.transport.connection_pool.active_connections += 1
+            
+            self.logger.info("Pre-warmed connections for better performance")
+            
+        except Exception as e:
+            self.logger.warning("Failed to pre-warm connections", error=str(e))
     
     def _start_signalr_hub(self):
         """Start SignalR hub"""
