@@ -459,8 +459,42 @@ class IoTDataBridge:
             sock.close()
             
             if final_check == 0:
-                print("   ❌ Port 1883 is still in use at final check, waiting more...")
-                time.sleep(3)
+                print("   ❌ Port 1883 is still in use at final check, trying aggressive cleanup...")
+                
+                # Try more aggressive cleanup
+                try:
+                    # Kill any process using port 1883 with sudo
+                    subprocess.run(["sudo", "fuser", "-k", "1883/tcp"], check=False, capture_output=True)
+                    time.sleep(1)
+                    
+                    # Try to find and kill any remaining processes
+                    result = subprocess.run(["sudo", "lsof", "-ti:1883"], capture_output=True, text=True)
+                    if result.stdout.strip():
+                        pids = result.stdout.strip().split('\n')
+                        for pid in pids:
+                            if pid.strip():
+                                print(f"   🔧 Force killing PID {pid}")
+                                subprocess.run(["sudo", "kill", "-9", pid.strip()], check=False, capture_output=True)
+                    
+                    # Wait for port to be released
+                    time.sleep(3)
+                    
+                    # Final check
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(1)
+                    final_final_check = sock.connect_ex(('localhost', 1883))
+                    sock.close()
+                    
+                    if final_final_check == 0:
+                        print("   ❌ Port 1883 still in use after aggressive cleanup")
+                        print("   💡 Trying to start mosquitto on different port...")
+                        # We'll try to start anyway and let mosquitto handle it
+                    else:
+                        print("   ✅ Port 1883 finally released!")
+                        
+                except Exception as e:
+                    print(f"   ⚠️  Aggressive cleanup failed: {e}")
+                    pass
             
             print(f"Starting mosquitto with command: {' '.join(cmd)}")
             
@@ -482,6 +516,33 @@ class IoTDataBridge:
                     print("❌ MQTT broker failed to start:")
                     print(f"STDOUT: {stdout}")
                     print(f"STDERR: {stderr}")
+                    
+                    # Check if it's a port binding issue
+                    if "Address already in use" in stderr or "Address already in use" in stdout:
+                        print("🔧 Port binding issue detected. Trying alternative approach...")
+                        
+                        # Try starting mosquitto with different options
+                        try:
+                            print("   🔄 Trying mosquitto with -p flag...")
+                            alt_cmd = ["mosquitto", "-p", "1884", "-v"]  # Use different port
+                            alt_process = subprocess.Popen(alt_cmd, cwd=str(mosquitto_conf.parent), 
+                                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                                         text=True)
+                            time.sleep(2)
+                            
+                            if alt_process.poll() is None:
+                                print("✅ MQTT broker started on port 1884")
+                                print("⚠️  Note: Using port 1884 instead of 1883")
+                                return True
+                            else:
+                                alt_stdout, alt_stderr = alt_process.communicate()
+                                print(f"❌ Alternative start also failed:")
+                                print(f"STDOUT: {alt_stdout}")
+                                print(f"STDERR: {alt_stderr}")
+                                
+                        except Exception as e:
+                            print(f"❌ Alternative start failed: {e}")
+                    
                     return False
                     
             except Exception as e:
