@@ -256,8 +256,34 @@ class SignalRInputHandler:
                     self.logger.warning("Empty arguments in SignalR message")
                     return
             elif isinstance(message, str):
-                # JSON 문자열 형태
-                payload = json.loads(message)
+                # JSON 문자열 형태 - 여러 메시지가 연결된 경우 처리
+                try:
+                    # 먼저 단일 JSON으로 파싱 시도
+                    payload = json.loads(message)
+                except json.JSONDecodeError:
+                    # 여러 메시지가 연결된 경우, 첫 번째 메시지만 추출
+                    try:
+                        # 첫 번째 완전한 JSON 객체 찾기
+                        brace_count = 0
+                        end_pos = 0
+                        for i, char in enumerate(message):
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    end_pos = i + 1
+                                    break
+                        
+                        if end_pos > 0:
+                            first_message = message[:end_pos]
+                            payload = json.loads(first_message)
+                        else:
+                            self.logger.warning("Could not parse connected messages")
+                            return
+                    except json.JSONDecodeError as e:
+                        self.logger.error("Failed to parse message", error=str(e), message=message[:100])
+                        return
             else:
                 # 기타 형태
                 payload = message
