@@ -69,6 +69,7 @@ public class IoTHub : Hub
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     public async Task SendBatchMessages(string groupName, string target, string batchMessagesJson)
     {
         try
@@ -109,6 +110,8 @@ public class IoTHub : Hub
         }
     }
 
+=======
+>>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식)
 =======
 >>>>>>> parent of de65d42 (perf: SignalR 데이터 전송 방식)
     public override async Task OnConnectedAsync()
