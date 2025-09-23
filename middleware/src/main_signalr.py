@@ -234,8 +234,7 @@ class IoTDataBridge:
         # Initialize transports layer
         self.transports_layer = TransportLayer(
             self.config.transports,
-            self.device_catalog,
-            self._handle_device_ingest
+            self.device_catalog
         )
         
         # Initialize logging layer
