@@ -4,6 +4,10 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure minimal logging for production
+builder.Logging.ClearProviders();
+builder.Logging.SetMinimumLevel(LogLevel.Warning);
+
 // Add services to the container with performance optimizations
 builder.Services.AddSignalR(options =>
 {
@@ -63,11 +67,7 @@ public class IoTHub : Hub
         _connectionTimes[Context.ConnectionId] = DateTime.UtcNow;
         Interlocked.Increment(ref _totalConnections);
         
-        // Reduced logging for performance
-        if (_totalConnections % 100 == 0)
-        {
-            Console.WriteLine($"Total connections: {_totalConnections}, Active: {_connectionTimes.Count}");
-        }
+        // Silent connection tracking
     }
 
     public async Task LeaveGroup(string groupName)
@@ -81,11 +81,7 @@ public class IoTHub : Hub
         await Clients.Group(groupName).SendAsync(target, message);
         Interlocked.Increment(ref _totalMessages);
         
-        // Batch logging for performance
-        if (_totalMessages % 1000 == 0)
-        {
-            Console.WriteLine($"Total messages sent: {_totalMessages}");
-        }
+        // Silent message tracking
     }
 
     public async Task SendToGroup(string groupName, string target, object data)
@@ -111,11 +107,7 @@ public class IoTHub : Hub
                 
                 Interlocked.Add(ref _totalMessages, batchMessages.Length);
                 
-                // Reduced logging frequency
-                if (_totalMessages % 5000 == 0)
-                {
-                    Console.WriteLine($"Batch sent {batchMessages.Length} messages to group {groupName}, Total: {_totalMessages}");
-                }
+                // Silent batch tracking
             }
         }
         catch (Exception ex)
@@ -130,11 +122,7 @@ public class IoTHub : Hub
         _connectionTimes[Context.ConnectionId] = DateTime.UtcNow;
         _messageCounts[Context.ConnectionId] = 0;
         
-        // Reduced logging for performance
-        if (_totalConnections % 50 == 0)
-        {
-            Console.WriteLine($"Client connected: {Context.ConnectionId} from {Context.GetHttpContext()?.Connection.RemoteIpAddress}");
-        }
+        // Silent connection
         
         await base.OnConnectedAsync();
     }
@@ -144,11 +132,7 @@ public class IoTHub : Hub
         _connectionTimes.TryRemove(Context.ConnectionId, out _);
         _messageCounts.TryRemove(Context.ConnectionId, out _);
         
-        // Reduced logging for performance
-        if (exception != null)
-        {
-            Console.WriteLine($"Client disconnected with error: {Context.ConnectionId}, Exception: {exception.Message}");
-        }
+        // Silent disconnection
         
         await base.OnDisconnectedAsync(exception);
     }
