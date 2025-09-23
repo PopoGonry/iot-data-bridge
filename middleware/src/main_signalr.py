@@ -234,8 +234,12 @@ class IoTDataBridge:
         # Set up optimized layer callbacks
         self.resolver_layer.set_transports_callback(self._handle_resolved_event)
         
-        # Pre-warm connections for better performance
-        await self._pre_warm_connections()
+            # Pre-warm connections for better performance
+            try:
+                await self._pre_warm_connections()
+            except Exception as e:
+                # Silent pre-warm failure
+                pass
     
     async def _pre_warm_connections(self):
         """Pre-warm connections for better performance"""
@@ -256,10 +260,12 @@ class IoTDataBridge:
                     self.transports_layer.transport.connection_pool.connections.append(connection)
                     self.transports_layer.transport.connection_pool.active_connections += 1
             
-            self.logger.info("Pre-warmed connections for better performance")
+            # Silent pre-warm success
+            pass
             
         except Exception as e:
-            self.logger.warning("Failed to pre-warm connections", error=str(e))
+            # Silent pre-warm failure
+            pass
     
     def _start_signalr_hub(self):
         """Start SignalR hub with better error handling"""
@@ -291,13 +297,10 @@ class IoTDataBridge:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
                 return
             
-            print(f"Starting SignalR Hub from: {signalr_hub_dir}")
-            
             # Check if dotnet is available
             try:
                 subprocess.run(["dotnet", "--version"], check=True, capture_output=True)
             except (subprocess.CalledProcessError, FileNotFoundError):
-                print("Error: dotnet not found. Please install .NET SDK")
                 return
             
             # Start SignalR hub in background
@@ -310,19 +313,19 @@ class IoTDataBridge:
             
             # Check if process is still running
             if result.poll() is None:
-                print("SignalR Hub started successfully")
+                # Silent success
+                pass
             else:
                 stdout, stderr = result.communicate()
-                print(f"Failed to start SignalR hub:")
-                print(f"STDOUT: {stdout.decode()}")
-                print(f"STDERR: {stderr.decode()}")
+                # Silent failure
+                pass
                 
         except FileNotFoundError:
-            print("Warning: dotnet not found. Please install .NET SDK or start SignalR hub manually.")
+            # Silent failure
+            pass
         except Exception as e:
-            print(f"Error starting SignalR hub: {e}")
-            import traceback
-            traceback.print_exc()
+            # Silent failure
+            pass
     
     def _stop_signalr_hub(self):
         """Stop SignalR hub"""

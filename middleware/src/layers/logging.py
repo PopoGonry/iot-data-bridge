@@ -57,7 +57,7 @@ class OptimizedLoggingLayer(LoggingLayerInterface):
         if self.enable_async_logging:
             # Start batch processing task
             self._batch_task = asyncio.create_task(self._process_log_batch())
-            self.logger.info("Optimized logging layer started with batch processing")
+            # Silent startup
     
     async def stop(self):
         """Stop logging layer and flush remaining logs"""
