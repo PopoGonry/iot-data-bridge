@@ -9,7 +9,7 @@ import uuid
 from typing import Optional, Callable, Any
 import structlog
 
-from signalrcore import HubConnectionBuilder
+from signalrcore.hub_connection_builder import HubConnectionBuilder
 
 from layers.base import InputLayerInterface
 from models.events import IngressEvent
