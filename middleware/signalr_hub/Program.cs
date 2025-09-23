@@ -60,10 +60,12 @@ public class IoTHub : Hub
             // 배치 메시지를 파싱하여 각각 전송
             var batchMessages = System.Text.Json.JsonSerializer.Deserialize<object[]>(batchMessagesJson);
             
-            foreach (var message in batchMessages)
-            {
-                await Clients.Group(groupName).SendAsync(target, message);
-            }
+            // 병렬로 모든 메시지를 전송
+            var tasks = batchMessages.Select(message => 
+                Clients.Group(groupName).SendAsync(target, message)
+            );
+            
+            await Task.WhenAll(tasks);
             
             Console.WriteLine($"Sent {batchMessages.Length} batch messages to group {groupName}, target {target}");
         }

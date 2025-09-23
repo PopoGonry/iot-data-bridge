@@ -53,15 +53,11 @@ class SignalRInputHandler:
             self.connection.on_close(lambda: None)
             self.connection.on_error(lambda data: None)
             
-            # Wait a moment for SignalR hub to be fully ready
-            import time
-            time.sleep(3)
-            
             # Start connection
             self.connection.start()
             
-            # Wait for connection to stabilize
-            time.sleep(2)
+            # Wait for connection to stabilize asynchronously
+            await asyncio.sleep(2)
             
             # Check if connection is still active
             if hasattr(self.connection, 'transport') and hasattr(self.connection.transport, '_ws'):
@@ -134,7 +130,8 @@ class SignalRInputHandler:
             try:
                 # Try to get the current event loop
                 loop = asyncio.get_running_loop()
-                loop.create_task(self.callback(ingress_event))
+                # Use create_task for better performance
+                asyncio.create_task(self.callback(ingress_event))
             except RuntimeError:
                 # If no event loop is running, create a new one
                 asyncio.run(self.callback(ingress_event))

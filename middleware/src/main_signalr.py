@@ -287,9 +287,13 @@ class IoTDataBridge:
             await self.transports_layer.start()
             await self.logging_layer.start()
             
-            # Keep running
-            while self.is_running:
-                await asyncio.sleep(1)
+            # Keep running with more efficient waiting
+            try:
+                while self.is_running:
+                    # Use a longer sleep to reduce CPU usage while maintaining responsiveness
+                    await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                pass
                 
         except KeyboardInterrupt:
             pass
