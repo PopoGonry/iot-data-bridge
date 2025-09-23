@@ -7,6 +7,8 @@ import asyncio
 import json
 import signal
 import sys
+import uuid
+from datetime import datetime
 try:
     from signalrcore.hub_connection_builder import HubConnectionBuilder
     from signalrcore.hub.base_hub_connection import BaseHubConnection
@@ -37,7 +39,7 @@ async def publish_test_data(hub_url, group_name):
         print("Error: SignalR library not available. Please install 'signalrcore'.")
         sys.exit(1)
     
-    interval = 5  # 5초마다 데이터 전송
+    interval = 10  # 10초마다 데이터 전송 (부하 감소)
     
     print(f"Starting IoT Data Publisher (SignalR)")
     print(f"Connecting to SignalR hub at {hub_url}")
@@ -82,7 +84,7 @@ async def publish_test_data(hub_url, group_name):
             
             print(f"Cycle #{cycle_count} - Publishing {len(test_cases)} data points...")
             
-            # 모든 데이터를 동시에 전송 (MQTT 방식과 동일)
+            # 데이터 압축 및 배치 처리로 성능 최적화
             batch_messages = []
             
             # 먼저 모든 메시지를 준비
@@ -93,19 +95,27 @@ async def publish_test_data(hub_url, group_name):
                 print(f"  {i}. {test_case['name']}: {test_case['data']['payload']['VALUE']}")
                 batch_messages.append(test_case['data'])
             
-            # 준비된 모든 메시지를 동시에 전송
+            # 준비된 모든 메시지를 압축된 배치로 전송
             if running and batch_messages:
                 try:
-                    # SignalR로 모든 메시지를 한번에 전송 (배치 전송)
-                    connection.send("SendBatchMessages", [group_name, "ingress", json.dumps(batch_messages)])
+                    # 압축된 배치 메시지 생성
+                    compressed_batch = {
+                        "batch_id": str(uuid.uuid4()),
+                        "timestamp": datetime.now().isoformat(),
+                        "count": len(batch_messages),
+                        "data": batch_messages
+                    }
+                    
+                    # SignalR로 압축된 배치를 한번에 전송
+                    connection.send("SendBatchMessages", [group_name, "ingress", json.dumps([compressed_batch])])
                     
                     # 전송 완료 후 잠시 대기 (연결 안정화)
                     await asyncio.sleep(0.1)
                     
                 except Exception as e:
-                    print(f"Error sending batch messages, trying individual messages: {e}")
-                    # 배치 전송 실패 시 개별 메시지로 전송
-                    for i, message_data in enumerate(batch_messages, 1):
+                    print(f"Error sending compressed batch, trying individual messages: {e}")
+                    # 배치 전송 실패 시 개별 메시지로 전송 (최대 10개만)
+                    for i, message_data in enumerate(batch_messages[:10], 1):
                         try:
                             connection.send("SendMessage", [group_name, "ingress", json.dumps(message_data)])
                         except Exception as e2:

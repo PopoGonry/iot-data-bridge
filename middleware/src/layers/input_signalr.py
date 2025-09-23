@@ -113,6 +113,32 @@ class SignalRInputHandler:
             else:
                 payload = message
             
+            # Handle compressed batch messages
+            if isinstance(payload, dict) and 'batch_id' in payload and 'data' in payload:
+                # Process each item in the batch
+                for item in payload['data']:
+                    trace_id = str(uuid.uuid4())
+                    ingress_event = IngressEvent(
+                        trace_id=trace_id,
+                        raw=item,
+                        meta={
+                            "source": "signalr",
+                            "group": self.config.group,
+                            "target": "ingress",
+                            "batch_id": payload.get('batch_id'),
+                            "batch_count": payload.get('count', 1)
+                        }
+                    )
+                    
+                    # Schedule the callback as a task
+                    import asyncio
+                    try:
+                        loop = asyncio.get_running_loop()
+                        asyncio.create_task(self.callback(ingress_event))
+                    except RuntimeError:
+                        asyncio.run(self.callback(ingress_event))
+                return
+            
             # Create ingress event
             trace_id = str(uuid.uuid4())
             ingress_event = IngressEvent(
