@@ -114,7 +114,7 @@ class SignalRInputHandler:
         self.logger.debug("Building SignalR connection", url=self.config.url)
         self.connection = HubConnectionBuilder().with_url(self.config.url).build()
 
-        # 메시지 핸들러
+        # 메시지 핸들러 - 서버에서 보내는 이벤트 이름과 맞춤
         self.connection.on("ingress", self._on_message)
 
         # 연결 오픈 시: 그룹 조인(백오프 재시도)

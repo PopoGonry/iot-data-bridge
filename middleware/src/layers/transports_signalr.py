@@ -66,8 +66,8 @@ class SignalRTransport:
         self._last_activity_ts: float = 0.0
 
         # 허브 메서드 이름/옵션
-        # 서버 허브 구현에 맞게 필요시 이 이름을 맞추세요. 기본은 "SendMessage"
-        self._hub_method_send: str = getattr(self.config, "method_send", "SendMessage")
+        # 서버 허브 구현에 맞게 필요시 이 이름을 맞추세요. 기본은 "SendToGroup"
+        self._hub_method_send: str = getattr(self.config, "method_send", "SendToGroup")
         # 선택: 서버가 핑을 받을 수 있다면 설정 (없으면 워치독은 재시작만 수행)
         self._hub_method_ping: Optional[str] = getattr(self.config, "method_ping", None)
 
@@ -173,8 +173,8 @@ class SignalRTransport:
                 if not self.connection:
                     # Lazy-start safeguard if connection was dropped
                     await self._restart_connection()
-                # SignalR hub method: [group, target, json_payload]
-                self.connection.send(self._hub_method_send, [group, target, json.dumps(payload)])
+                # SignalR hub method: [group, target, payload_object]
+                self.connection.send(self._hub_method_send, [group, target, payload])
                 return True
             except Exception as e:
                 self.logger.error("SignalR send error", group=group, target=target, error=str(e))
