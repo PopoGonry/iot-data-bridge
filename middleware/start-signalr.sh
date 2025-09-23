@@ -112,6 +112,38 @@ echo
 echo "Starting IoT Data Bridge Middleware (SignalR)..."
 echo
 
+# Check if SignalR server is running
+echo "Checking if SignalR server is running..."
+if ! curl -s http://localhost:5000/ > /dev/null 2>&1; then
+    echo "SignalR server is not running. Starting SignalR server..."
+    
+    # Start SignalR server in background
+    cd signalr_hub
+    nohup dotnet run > ../signalr_server.log 2>&1 &
+    SIGNALR_PID=$!
+    cd ..
+    
+    # Wait for server to start
+    echo "Waiting for SignalR server to start..."
+    for i in {1..10}; do
+        if curl -s http://localhost:5000/ > /dev/null 2>&1; then
+            echo "SignalR server started successfully!"
+            break
+        fi
+        echo "Attempt $i/10: Waiting for server..."
+        sleep 2
+    done
+    
+    # Check if server started successfully
+    if ! curl -s http://localhost:5000/ > /dev/null 2>&1; then
+        echo "Error: Failed to start SignalR server"
+        echo "Check signalr_server.log for details"
+        exit 1
+    fi
+else
+    echo "SignalR server is already running."
+fi
+
 # Start the middleware
 python3 src/main_signalr.py
 
