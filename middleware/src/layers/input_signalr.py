@@ -252,14 +252,27 @@ class SignalRInputHandler:
 
             first = args[0]
             self.logger.debug("Processing message", first_arg=first, first_type=type(first))
-            # Normalize payload
-            if isinstance(first, str):
+            
+            # SignalR 메시지 형태 처리: {"type":1,"target":"ingress","arguments":[...]}
+            if isinstance(first, dict) and "arguments" in first:
+                # SignalR 표준 메시지 형태
+                arguments = first.get("arguments", [])
+                if arguments and len(arguments) > 0:
+                    payload = arguments[0]  # 첫 번째 argument를 payload로 사용
+                    message = str(first)
+                else:
+                    self.logger.warning("Empty arguments in SignalR message")
+                    return
+            elif isinstance(first, str):
+                # JSON 문자열 형태
                 payload = json.loads(first)
                 message = first
             elif isinstance(first, list) and first and isinstance(first[0], str):
+                # 리스트의 첫 번째 요소가 JSON 문자열
                 payload = json.loads(first[0])
                 message = first[0]
             else:
+                # 기타 형태
                 payload = first
                 message = repr(first)
 
