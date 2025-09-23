@@ -288,9 +288,8 @@ class SignalRInputHandler:
                 traceback=traceback.format_exc(),
             )
             # 디버깅을 위해 더 자세한 정보 출력
-            self.logger.debug("Full args received", args=args)
-            self.logger.debug("First arg type", first_type=type(first) if 'first' in locals() else "undefined")
-            self.logger.debug("First arg content", first_content=first if 'first' in locals() else "undefined")
+            self.logger.debug("Message received", message=message)
+            self.logger.debug("Message type", message_type=type(message))
 
     def _on_connection_close(self, *args, **kwargs):
         """Handle connection close - schedule reconnection on main loop"""
