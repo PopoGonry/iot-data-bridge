@@ -6,6 +6,7 @@ IoT Device - Simulates a device receiving data from middleware
 import asyncio
 import json
 import sys
+import socket
 from pathlib import Path
 from typing import Dict, Any, Optional
 import structlog
@@ -98,24 +99,53 @@ class IoTDevice:
                     raise
     
     async def _check_mqtt_broker_availability(self, host: str, port: int) -> bool:
-        """Check if MQTT broker is reachable"""
+        """Check if MQTT broker is reachable with detailed diagnostics"""
         try:
+            print(f"🔍 Checking MQTT broker availability at {host}:{port}...")
+            
             # Create a socket connection to check if the port is open
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(3)  # 3 second timeout
+            sock.settimeout(5)  # 5 second timeout
             
             result = sock.connect_ex((host, port))
             sock.close()
             
             if result == 0:
+                print(f"✅ MQTT broker is reachable at {host}:{port}")
                 self.logger.debug("MQTT broker is reachable", host=host, port=port)
                 return True
             else:
+                print(f"❌ MQTT broker is not reachable at {host}:{port}")
+                print(f"   Error code: {result}")
+                
+                # Provide specific error messages
+                if result == 111:  # Connection refused
+                    print("   💡 Connection refused - MQTT broker may not be running")
+                elif result == 110:  # Connection timed out
+                    print("   💡 Connection timed out - Network issue or firewall blocking")
+                elif result == 113:  # No route to host
+                    print("   💡 No route to host - Check network connectivity")
+                else:
+                    print(f"   💡 Socket error code: {result}")
+                
+                # Try to ping the host
+                try:
+                    import subprocess
+                    ping_result = subprocess.run(["ping", "-c", "1", host], 
+                                               capture_output=True, text=True, timeout=5)
+                    if ping_result.returncode == 0:
+                        print(f"   ✅ Host {host} is reachable via ping")
+                    else:
+                        print(f"   ❌ Host {host} is not reachable via ping")
+                except:
+                    print(f"   ⚠️  Could not ping host {host}")
+                
                 self.logger.warning("MQTT broker is not reachable", 
                                   host=host, port=port, error_code=result)
                 return False
                 
         except Exception as e:
+            print(f"❌ Error checking MQTT broker availability: {e}")
             self.logger.warning("Error checking MQTT broker availability", 
                              host=host, port=port, error=str(e))
             return False
