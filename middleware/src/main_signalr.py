@@ -228,8 +228,40 @@ class IoTDataBridge:
                     print("Port 5000 is still in use, trying to force kill...")
                     # Force kill any process using port 5000
                     try:
+                        # Try fuser first
                         subprocess.run(["fuser", "-k", "5000/tcp"], check=False, capture_output=True)
                         await asyncio.sleep(1)
+                        
+                        # If still in use, try to find and kill the process using netstat/lsof
+                        try:
+                            # Find process using port 5000
+                            result = subprocess.run(["netstat", "-tlnp"], capture_output=True, text=True)
+                            for line in result.stdout.split('\n'):
+                                if ':5000' in line and 'LISTEN' in line:
+                                    parts = line.split()
+                                    if len(parts) > 6:
+                                        pid_info = parts[6]
+                                        if '/' in pid_info:
+                                            pid = pid_info.split('/')[0]
+                                            print(f"Killing process {pid} using port 5000")
+                                            subprocess.run(["kill", "-9", pid], check=False, capture_output=True)
+                                            await asyncio.sleep(1)
+                        except:
+                            pass
+                            
+                        # Try lsof as alternative
+                        try:
+                            result = subprocess.run(["lsof", "-ti:5000"], capture_output=True, text=True)
+                            if result.stdout.strip():
+                                pids = result.stdout.strip().split('\n')
+                                for pid in pids:
+                                    if pid.strip():
+                                        print(f"Killing process {pid} using port 5000 (lsof)")
+                                        subprocess.run(["kill", "-9", pid.strip()], check=False, capture_output=True)
+                                        await asyncio.sleep(1)
+                        except:
+                            pass
+                            
                     except:
                         pass
                         
@@ -254,14 +286,26 @@ class IoTDataBridge:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
                 return False
             
-            # Final check if port 5000 is available
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            result = sock.connect_ex(('localhost', 5000))
-            sock.close()
+            # Wait a bit more for processes to fully stop
+            await asyncio.sleep(2)
             
-            if result == 0:
-                print("Error: Port 5000 is still in use after cleanup attempts")
+            # Final check if port 5000 is available with retries
+            max_retries = 5
+            for retry in range(max_retries):
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                result = sock.connect_ex(('localhost', 5000))
+                sock.close()
+                
+                if result != 0:
+                    print(f"Port 5000 is now available (attempt {retry + 1})")
+                    break
+                else:
+                    print(f"Port 5000 still in use, waiting... (attempt {retry + 1}/{max_retries})")
+                    await asyncio.sleep(2)
+            else:
+                print("Error: Port 5000 is still in use after all cleanup attempts")
                 print("Please manually stop any SignalR hubs and try again")
+                print("You can try: sudo pkill -f dotnet && sudo fuser -k 5000/tcp")
                 return False
             
             print(f"Starting SignalR hub from: {signalr_hub_dir}")
