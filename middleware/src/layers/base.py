@@ -50,15 +50,6 @@ class BaseLayer(ABC):
         """Increment error count"""
         self.error_count += 1
         self.last_activity = asyncio.get_event_loop().time()
-    
-    def get_stats(self) -> dict:
-        """Get layer statistics for monitoring"""
-        return {
-            "processed": self.processed_count,
-            "errors": self.error_count,
-            "is_running": self.is_running,
-            "last_activity": self.last_activity
-        }
 
 
 class InputLayerInterface(BaseLayer):

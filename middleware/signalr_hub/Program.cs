@@ -57,15 +57,13 @@ public class IoTHub : Hub
     {
         try
         {
-            // Parse batch messages and send them in parallel
+            // 배치 메시지를 파싱하여 각각 전송
             var batchMessages = System.Text.Json.JsonSerializer.Deserialize<object[]>(batchMessagesJson);
             
-            // Send all messages in parallel using Task.WhenAll for better performance
-            var tasks = batchMessages.Select(message => 
-                Clients.Group(groupName).SendAsync(target, message)
-            );
-            
-            await Task.WhenAll(tasks);
+            foreach (var message in batchMessages)
+            {
+                await Clients.Group(groupName).SendAsync(target, message);
+            }
             
             Console.WriteLine($"Sent {batchMessages.Length} batch messages to group {groupName}, target {target}");
         }
@@ -88,3 +86,4 @@ public class IoTHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 }
+

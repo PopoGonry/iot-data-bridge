@@ -15,7 +15,7 @@ import yaml
 from layers.input_signalr import InputLayer
 from layers.mapping import MappingLayer
 from layers.resolver import ResolverLayer
-from layers.transports_signalr import TransportLayer
+from layers.transports_signalr import TransportsLayer
 from layers.logging import LoggingLayer
 from catalogs.mapping_catalog import MappingCatalog
 from catalogs.device_catalog import DeviceCatalog
@@ -59,55 +59,7 @@ class IoTDataBridge:
             await self._initialize_layers()
             
             # Start SignalR hub
-            hub_started = await self._start_signalr_hub()
-            if not hub_started:
-                print("❌ SignalR hub failed to start. Trying alternative approaches...")
-                
-                # Try manual start with different options
-                try:
-                    print("   🔄 Trying manual dotnet start...")
-                    import subprocess
-                    import os
-                    
-                    # Try to start with explicit configuration
-                    signalr_hub_dir = Path("signalr_hub")
-                    if signalr_hub_dir.exists():
-                        print(f"   📁 Found signalr_hub directory: {signalr_hub_dir.absolute()}")
-                        
-                        # Try with explicit port binding
-                        env = os.environ.copy()
-                        env['ASPNETCORE_URLS'] = 'http://localhost:5000'
-                        env['ASPNETCORE_ENVIRONMENT'] = 'Development'
-                        
-                        manual_result = subprocess.Popen([
-                            "dotnet", "run", "--urls", "http://localhost:5000"
-                        ], cwd=str(signalr_hub_dir), env=env, 
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                        
-                        # Wait a bit and check
-                        await asyncio.sleep(3)
-                        
-                        if manual_result.poll() is None:
-                            print("   ✅ Manual start successful")
-                            if await self._verify_hub_connection():
-                                print("✅ SignalR hub is now responding on port 5000")
-                                hub_started = True
-                            else:
-                                print("   ⚠️  Manual start succeeded but hub not responding")
-                        else:
-                            stdout, stderr = manual_result.communicate()
-                            print(f"   ❌ Manual start failed:")
-                            print(f"STDOUT: {stdout}")
-                            print(f"STDERR: {stderr}")
-                            
-                except Exception as e:
-                    print(f"   ❌ Manual start attempt failed: {e}")
-                
-                if not hub_started:
-                    print("⚠️  Continuing without SignalR hub...")
-                    print("💡 You can try starting the hub manually:")
-                    print("   cd middleware/signalr_hub")
-                    print("   dotnet run")
+            self._start_signalr_hub()
             
         except Exception as e:
             print(f"Failed to initialize IoT Data Bridge: {e}")
@@ -232,9 +184,10 @@ class IoTDataBridge:
         )
         
         # Initialize transports layer
-        self.transports_layer = TransportLayer(
+        self.transports_layer = TransportsLayer(
             self.config.transports,
-            self.device_catalog
+            self.device_catalog,
+            self._handle_device_ingest
         )
         
         # Initialize logging layer
@@ -245,73 +198,16 @@ class IoTDataBridge:
         # Set up layer callbacks
         self.resolver_layer.set_transports_callback(self._handle_resolved_event)
     
-    async def _start_signalr_hub(self):
-        """Start SignalR hub asynchronously"""
+    def _start_signalr_hub(self):
+        """Start SignalR hub"""
         import subprocess
         import os
-        import asyncio
         
         try:
-            # Stop any existing dotnet processes more aggressively
+            # Stop any existing dotnet processes (silently ignore errors)
             try:
-                print("Stopping any existing SignalR hubs...")
-                # Try multiple methods to stop dotnet processes
-                subprocess.run(["pkill", "-f", "dotnet"], check=False, capture_output=True)
                 subprocess.run(["pkill", "dotnet"], check=False, capture_output=True)
-                subprocess.run(["killall", "dotnet"], check=False, capture_output=True)
-                
-                # Wait for processes to stop
-                await asyncio.sleep(2)
-                
-                # Check if port 5000 is still in use
-                import socket
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                result = sock.connect_ex(('localhost', 5000))
-                sock.close()
-                
-                if result == 0:
-                    print("Port 5000 is still in use, trying to force kill...")
-                    # Force kill any process using port 5000
-                    try:
-                        # Try fuser first
-                        subprocess.run(["fuser", "-k", "5000/tcp"], check=False, capture_output=True)
-                        await asyncio.sleep(1)
-                        
-                        # If still in use, try to find and kill the process using netstat/lsof
-                        try:
-                            # Find process using port 5000
-                            result = subprocess.run(["netstat", "-tlnp"], capture_output=True, text=True)
-                            for line in result.stdout.split('\n'):
-                                if ':5000' in line and 'LISTEN' in line:
-                                    parts = line.split()
-                                    if len(parts) > 6:
-                                        pid_info = parts[6]
-                                        if '/' in pid_info:
-                                            pid = pid_info.split('/')[0]
-                                            print(f"Killing process {pid} using port 5000")
-                                            subprocess.run(["kill", "-9", pid], check=False, capture_output=True)
-                                            await asyncio.sleep(1)
-                        except:
-                            pass
-                            
-                        # Try lsof as alternative
-                        try:
-                            result = subprocess.run(["lsof", "-ti:5000"], capture_output=True, text=True)
-                            if result.stdout.strip():
-                                pids = result.stdout.strip().split('\n')
-                                for pid in pids:
-                                    if pid.strip():
-                                        print(f"Killing process {pid} using port 5000 (lsof)")
-                                        subprocess.run(["kill", "-9", pid.strip()], check=False, capture_output=True)
-                                        await asyncio.sleep(1)
-                        except:
-                            pass
-                            
-                    except:
-                        pass
-                        
-            except Exception as e:
-                print(f"Warning: Error stopping existing SignalR hubs: {e}")
+            except:
                 pass
             
             # Get the directory where signalr_hub is located
@@ -329,284 +225,28 @@ class IoTDataBridge:
             
             if not signalr_hub_dir:
                 print(f"Warning: signalr_hub directory not found. Searched: {[str(p) for p in possible_paths]}")
-                return False
+                return
             
-            # Wait longer for processes to fully stop and port to be released
-            print("   ⏳ Waiting for port to be fully released...")
-            await asyncio.sleep(5)
-            
-            # Final check if port 5000 is available with retries and detailed diagnostics
-            max_retries = 5
-            for retry in range(max_retries):
-                # Check port availability - connect_ex returns 0 if connection successful (port in use)
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(1)
-                result = sock.connect_ex(('localhost', 5000))
-                sock.close()
-                
-                if result == 0:
-                    print(f"❌ Port 5000 is still in use (attempt {retry + 1}/{max_retries})")
-                    
-                    # Show what's using the port
-                    try:
-                        # Check with netstat
-                        netstat_result = subprocess.run(["netstat", "-tlnp"], capture_output=True, text=True)
-                        for line in netstat_result.stdout.split('\n'):
-                            if ':5000' in line and 'LISTEN' in line:
-                                print(f"   📍 Port 5000 is being used by: {line}")
-                        
-                        # Check with lsof
-                        lsof_result = subprocess.run(["lsof", "-i:5000"], capture_output=True, text=True)
-                        if lsof_result.stdout.strip():
-                            print(f"   📍 lsof shows: {lsof_result.stdout.strip()}")
-                        
-                        # Check with ss
-                        ss_result = subprocess.run(["ss", "-tlnp"], capture_output=True, text=True)
-                        for line in ss_result.stdout.split('\n'):
-                            if ':5000' in line:
-                                print(f"   📍 ss shows: {line}")
-                                
-                    except Exception as e:
-                        print(f"   ⚠️  Could not get detailed port info: {e}")
-                    
-                    await asyncio.sleep(2)
-                else:
-                    print(f"✅ Port 5000 is now available (attempt {retry + 1})")
-                    break
-            else:
-                print("❌ Error: Port 5000 is still in use after all cleanup attempts")
-                print("🔍 Detailed port information:")
-                
-                # Final diagnostic
-                try:
-                    print("\n📊 Current port 5000 status:")
-                    subprocess.run(["netstat", "-tlnp"], check=False)
-                    print("\n📊 lsof output:")
-                    subprocess.run(["lsof", "-i:5000"], check=False)
-                    print("\n📊 ss output:")
-                    subprocess.run(["ss", "-tlnp"], check=False)
-                except:
-                    pass
-                
-                print("\n💡 Manual cleanup commands:")
-                print("   sudo pkill -f dotnet")
-                print("   sudo fuser -k 5000/tcp")
-                print("   sudo netstat -tlnp | grep 5000")
-                return False
-            
-            # Additional wait and final port check before starting SignalR hub
-            print("   ⏳ Final wait before starting SignalR hub...")
-            await asyncio.sleep(2)
-            
-            # One more port check
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            final_check = sock.connect_ex(('localhost', 5000))
-            sock.close()
-            
-            if final_check == 0:
-                print("   ❌ Port 5000 is still in use at final check, waiting more...")
-                await asyncio.sleep(3)
-            
-            print(f"Starting SignalR hub from: {signalr_hub_dir}")
-            
-            # Start SignalR hub in background with more detailed output
-            print(f"   🔧 Starting dotnet run in directory: {signalr_hub_dir}")
+            # Start SignalR hub in background
             result = subprocess.Popen([
-                "dotnet", "run", "--verbosity", "normal"
-            ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                "dotnet", "run"
+            ], cwd=str(signalr_hub_dir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
-            # Wait for hub to start with longer timeout
-            print("   ⏳ Waiting for SignalR hub to start...")
-            await asyncio.sleep(5)
+            # Give it a moment to start
+            import time
+            time.sleep(2)
             
             # Check if process is still running
             if result.poll() is None:
-                print("   ✅ dotnet process is running")
-                
-                # Check stdout/stderr for any immediate errors
-                try:
-                    # Non-blocking read of available output
-                    import select
-                    import sys
-                    
-                    # Check if there's any output available
-                    if hasattr(select, 'select'):
-                        ready, _, _ = select.select([result.stdout, result.stderr], [], [], 0.1)
-                        if ready:
-                            for stream in ready:
-                                if stream == result.stdout:
-                                    output = stream.read()
-                                    if output:
-                                        print(f"   📤 STDOUT: {output}")
-                                elif stream == result.stderr:
-                                    output = stream.read()
-                                    if output:
-                                        print(f"   📤 STDERR: {output}")
-                except:
-                    pass
-                
-                # Verify hub is actually listening on port 5000 with retries
-                print("   🔍 Verifying SignalR hub connection...")
-                max_verification_attempts = 5
-                for attempt in range(max_verification_attempts):
-                    if await self._verify_hub_connection():
-                        print("✅ SignalR hub started successfully and is listening on port 5000")
-                        return True
-                    else:
-                        print(f"   ⏳ Hub not ready yet (attempt {attempt + 1}/{max_verification_attempts})")
-                        await asyncio.sleep(2)
-                
-                print("❌ SignalR hub process started but not responding on port 5000 after verification attempts")
-                
-                # Get final output for debugging
-                try:
-                    stdout, stderr = result.communicate(timeout=1)
-                    if stdout:
-                        print(f"   📤 Final STDOUT: {stdout}")
-                    if stderr:
-                        print(f"   📤 Final STDERR: {stderr}")
-                except:
-                    pass
-                
-                return False
+                pass  # SignalR hub started successfully
             else:
                 stdout, stderr = result.communicate()
-                print(f"❌ Failed to start SignalR hub:")
-                print(f"STDOUT: {stdout}")
-                print(f"STDERR: {stderr}")
-                return False
+                print(f"Failed to start SignalR hub: {stderr.decode()}")
                 
         except FileNotFoundError:
             print("Warning: dotnet not found. Please install .NET SDK or start SignalR hub manually.")
-            return False
         except Exception as e:
             print(f"Error starting SignalR hub: {e}")
-            return False
-    
-    async def _verify_hub_connection(self):
-        """Verify that SignalR hub is actually listening on port 5000"""
-        import socket
-        import asyncio
-        import requests
-        
-        try:
-            # Try to connect to port 5000
-            def check_port():
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(2)
-                result = sock.connect_ex(('localhost', 5000))
-                sock.close()
-                return result == 0
-            
-            # Run the check in a thread to avoid blocking
-            loop = asyncio.get_event_loop()
-            port_open = await loop.run_in_executor(None, check_port)
-            
-            if not port_open:
-                return False
-            
-            # Try to make HTTP request to verify it's actually the SignalR hub
-            try:
-                def check_http():
-                    response = requests.get('http://localhost:5000/health', timeout=3)
-                    return response.status_code == 200 and response.text.strip() == 'OK'
-                
-                http_ok = await loop.run_in_executor(None, check_http)
-                if http_ok:
-                    return True
-            except:
-                pass
-            
-            # Fallback: try the root endpoint
-            try:
-                def check_root():
-                    response = requests.get('http://localhost:5000/', timeout=3)
-                    return response.status_code == 200 and 'SignalR Hub' in response.text
-                
-                root_ok = await loop.run_in_executor(None, check_root)
-                if root_ok:
-                    return True
-            except:
-                pass
-            
-            return False
-            
-        except Exception as e:
-            print(f"Hub connection verification failed: {e}")
-            return False
-    
-    async def _heartbeat_monitor(self):
-        """Monitor system health and send heartbeat messages"""
-        import time
-        start_time = time.time()
-        heartbeat_count = 0
-        
-        while self.is_running:
-            try:
-                heartbeat_count += 1
-                current_time = time.time()
-                uptime = current_time - start_time
-                
-                # Get layer statistics
-                input_stats = getattr(self.input_layer, 'get_stats', lambda: {})()
-                mapping_stats = getattr(self.mapping_layer, 'get_stats', lambda: {})()
-                resolver_stats = getattr(self.resolver_layer, 'get_stats', lambda: {})()
-                transports_stats = getattr(self.transports_layer, 'get_stats', lambda: {})()
-                
-                # Create heartbeat message
-                heartbeat_msg = {
-                    "type": "heartbeat",
-                    "timestamp": current_time,
-                    "uptime": uptime,
-                    "heartbeat_count": heartbeat_count,
-                    "layers": {
-                        "input": {
-                            "processed": input_stats.get('processed', 0),
-                            "errors": input_stats.get('errors', 0),
-                            "is_running": getattr(self.input_layer, 'is_running', False)
-                        },
-                        "mapping": {
-                            "processed": mapping_stats.get('processed', 0),
-                            "errors": mapping_stats.get('errors', 0),
-                            "is_running": getattr(self.mapping_layer, 'is_running', False)
-                        },
-                        "resolver": {
-                            "processed": resolver_stats.get('processed', 0),
-                            "errors": resolver_stats.get('errors', 0),
-                            "is_running": getattr(self.resolver_layer, 'is_running', False)
-                        },
-                        "transports": {
-                            "processed": transports_stats.get('processed', 0),
-                            "errors": transports_stats.get('errors', 0),
-                            "is_running": getattr(self.transports_layer, 'is_running', False)
-                        }
-                    }
-                }
-                
-                # Log heartbeat
-                print(f"💓 HEARTBEAT #{heartbeat_count} - Uptime: {uptime:.1f}s")
-                print(f"   Input: {input_stats.get('processed', 0)} processed, {input_stats.get('errors', 0)} errors")
-                print(f"   Mapping: {mapping_stats.get('processed', 0)} processed, {mapping_stats.get('errors', 0)} errors")
-                print(f"   Resolver: {resolver_stats.get('processed', 0)} processed, {resolver_stats.get('errors', 0)} errors")
-                print(f"   Transports: {transports_stats.get('processed', 0)} processed, {transports_stats.get('errors', 0)} errors")
-                
-                # Check for potential issues
-                if input_stats.get('errors', 0) > 10:
-                    print("⚠️  WARNING: High error count in Input layer")
-                if mapping_stats.get('errors', 0) > 10:
-                    print("⚠️  WARNING: High error count in Mapping layer")
-                if resolver_stats.get('errors', 0) > 10:
-                    print("⚠️  WARNING: High error count in Resolver layer")
-                if transports_stats.get('errors', 0) > 10:
-                    print("⚠️  WARNING: High error count in Transports layer")
-                
-                # Wait for next heartbeat (30 seconds)
-                await asyncio.sleep(30)
-                
-            except Exception as e:
-                print(f"❌ Heartbeat monitor error: {e}")
-                await asyncio.sleep(30)  # Continue monitoring even if there's an error
     
     def _stop_signalr_hub(self):
         """Stop SignalR hub"""
@@ -647,23 +287,9 @@ class IoTDataBridge:
             await self.transports_layer.start()
             await self.logging_layer.start()
             
-            # Start heartbeat monitoring
-            heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
-            
-            # Keep running with more efficient waiting
-            try:
-                while self.is_running:
-                    # Use a longer sleep to reduce CPU usage while maintaining responsiveness
-                    await asyncio.sleep(0.1)
-            except asyncio.CancelledError:
-                pass
-            finally:
-                # Cancel heartbeat task
-                heartbeat_task.cancel()
-                try:
-                    await heartbeat_task
-                except asyncio.CancelledError:
-                    pass
+            # Keep running
+            while self.is_running:
+                await asyncio.sleep(1)
                 
         except KeyboardInterrupt:
             pass
