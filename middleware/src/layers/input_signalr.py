@@ -241,15 +241,25 @@ class SignalRInputHandler:
     # SignalR 이벤트 콜백
     # -------------------------
     def _on_message(self, message):
-        """Handle incoming SignalR message - reference 코드와 동일하게 수정"""
+        """Handle incoming SignalR message - reference 코드와 완전히 동일하게 수정"""
         self.last_message_time = time.time()
         try:
             self.logger.debug("SignalR message received", message=message)
             
-            # Parse message - reference 코드와 동일한 로직
-            if isinstance(message, str):
+            # Parse message - SignalR 표준 형태 처리
+            if isinstance(message, dict) and "arguments" in message:
+                # SignalR 표준 메시지 형태: {"type":1,"target":"ReceiveMessage","arguments":[...]}
+                arguments = message.get("arguments", [])
+                if arguments and len(arguments) > 0:
+                    payload = arguments[0]  # 첫 번째 argument를 payload로 사용
+                else:
+                    self.logger.warning("Empty arguments in SignalR message")
+                    return
+            elif isinstance(message, str):
+                # JSON 문자열 형태
                 payload = json.loads(message)
             else:
+                # 기타 형태
                 payload = message
 
             trace_id = str(uuid.uuid4())
@@ -258,9 +268,8 @@ class SignalRInputHandler:
                 raw=payload,
                 meta={
                     "source": "signalr",
-                    "group": self.config.group,
-                    "target": "ingress",
-                },
+                    "group": self.config.group
+                }
             )
 
             # 항상 메인 루프로 안전하게 위임
