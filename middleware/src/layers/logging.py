@@ -172,7 +172,5 @@ class OptimizedLoggingLayer(LoggingLayerInterface):
             await self._write_log_batch(batch)
 
 
-# Backward compatibility
-class LoggingLayer(OptimizedLoggingLayer):
-    """Backward compatible logging layer"""
-    pass
+# Use OptimizedLoggingLayer directly
+LoggingLayer = OptimizedLoggingLayer

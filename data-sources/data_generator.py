@@ -1173,14 +1173,9 @@ def generate_random_test_data():
     return test_cases
 
 
-def generate_test_data():
-    """Legacy function for backward compatibility"""
-    return generate_random_test_data()
-
-
 def print_test_data():
     """Print test data in JSON format"""
-    test_cases = generate_test_data()
+    test_cases = generate_random_test_data()
     
     print("=== IoT Data Bridge Marine Equipment Test Data ===\n")
     
