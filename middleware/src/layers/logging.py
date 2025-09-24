@@ -36,14 +36,23 @@ class OptimizedLoggingLayer(LoggingLayerInterface):
         self._file_handle = None
         
     def _setup_file_logging(self):
-        """Setup optimized file logging"""
+        """Setup optimized file logging with timestamped files"""
         # Create logs directory if it doesn't exist
         log_file = Path(self.config.file)
         log_file.parent.mkdir(parents=True, exist_ok=True)
         
+        # Create timestamped log file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_name = log_file.stem
+        log_ext = log_file.suffix
+        timestamped_log_file = log_file.parent / f"{log_name}_{timestamp}{log_ext}"
+        
+        # Store the timestamped log file path
+        self.timestamped_log_file = timestamped_log_file
+        
         # Setup rotating file handler for better performance
         self.file_handler = RotatingFileHandler(
-            log_file,
+            timestamped_log_file,
             maxBytes=self.config.max_size,
             backupCount=self.config.backup_count,
             encoding='utf-8'
@@ -76,11 +85,21 @@ class OptimizedLoggingLayer(LoggingLayerInterface):
             await self._file_handle.close()
     
     async def log_middleware_event(self, event: MiddlewareEventLog):
-        """Log middleware event - optimized for performance"""
+        """Log middleware event with data transmission details"""
         try:
             self._increment_processed()
-            # Skip middleware events to reduce log volume
-            pass
+            
+            # Create detailed middleware log message
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            log_message = f"{timestamp} | INFO | Data processed | trace_id={event.trace_id} | object={event.object} | target_devices={','.join(event.send_devices)}"
+            
+            if self.enable_async_logging:
+                # Add to batch queue
+                self.log_queue.append(log_message)
+            else:
+                # Direct logging (fallback)
+                await self._write_log_direct(log_message)
+            
         except Exception as e:
             self._increment_error()
     
@@ -132,9 +151,8 @@ class OptimizedLoggingLayer(LoggingLayerInterface):
             # Prepare batch content
             batch_content = '\n'.join(batch) + '\n'
             
-            # Async file write
-            log_file = Path(self.config.file)
-            async with aiofiles.open(log_file, 'a', encoding='utf-8') as f:
+            # Async file write to timestamped log file
+            async with aiofiles.open(self.timestamped_log_file, 'a', encoding='utf-8') as f:
                 await f.write(batch_content)
                 await f.flush()
             
@@ -154,8 +172,7 @@ class OptimizedLoggingLayer(LoggingLayerInterface):
     async def _write_log_direct(self, message: str):
         """Direct log writing (fallback)"""
         try:
-            log_file = Path(self.config.file)
-            async with aiofiles.open(log_file, 'a', encoding='utf-8') as f:
+            async with aiofiles.open(self.timestamped_log_file, 'a', encoding='utf-8') as f:
                 await f.write(message + '\n')
                 await f.flush()
             

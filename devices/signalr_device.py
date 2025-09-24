@@ -29,6 +29,11 @@ class IoTDevice:
         self.is_running = False
         self.data_count = 0
         self.logger = structlog.get_logger(f"device_{device_id}")
+        
+        # Create timestamped log file path at initialization
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.log_file = Path("logs") / f"device_{device_id}_{timestamp}.log"
     
     async def start(self):
         """Start the device"""
@@ -142,10 +147,9 @@ class IoTDevice:
             # Print to console
             print(log_message)
             
-            # Write to log file
-            log_file = Path("logs") / f"device_{self.device_id}.log"
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(log_file, 'a', encoding='utf-8') as f:
+            # Write to timestamped log file
+            self.log_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.log_file, 'a', encoding='utf-8') as f:
                 f.write(log_message + '\n')
                 f.flush()
             
